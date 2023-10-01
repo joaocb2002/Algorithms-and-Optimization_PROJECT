@@ -5,8 +5,7 @@
 % %   Author: João Castelo Branco, Mike, Rodas e Bernas
 % 
 % %   This file contains the Matlab resolution of Tasks 1-16 of the course's
-% %   projetc.
-
+% %   project.
 
 %% Task1 
 clear;
@@ -515,6 +514,8 @@ ranges = zeros(T, 4); % Four anchors
 angles = zeros(T, 4); % Four anchors
 velocities = zeros(T, 1);
 
+% ESTA PARTE AINDA NÃO ESTÁ BEM MAS DEVO ACABAR EM BREVE
+
 for t = 1:T
     % Simulate target motion
     if t > 1
@@ -540,10 +541,7 @@ for t = 1:T
     end
 end
 
-% Save the measurements as CSV files
-% csvwrite('ranges.csv', ranges);
-% csvwrite('angles.csv', angles);
-% csvwrite('velocities.csv', velocities);
+
 
 
 
