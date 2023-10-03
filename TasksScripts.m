@@ -17,17 +17,22 @@ a = 2;
 r = 1;
 
 % Define a range of x values for plotting
-x = linspace(0, 4, 500);  
+x = linspace(-2, 6, 500);  
 
 % Calculate the cost function: (|x - a| - r)^2
 cost = (abs(x - a) - r).^2;
 
 % Plot the cost function
-plot(x, cost);
+plot(x, cost, 'LineWidth',2,'DisplayName', 'Cost Function');
+hold;
+plot(2, 0, '.', 'MarkerSize', 15, 'DisplayName', 'Anchor'); % Display an Anchor
+set(gca, 'YLim', [-0.25, 2]); % Set Limits on Y Axis
 xlabel('x');
 ylabel('Cost');
 title('Cost Function: (|x - a| - r)^2');
 grid on;
+legend('Location', 'Best'); % Add Legend
+saveas(gcf,"Task1.png");
 
 
 % Comment: The cost function ( |x - a| - r )^2 indicates inconsistency
@@ -51,7 +56,7 @@ r1 = 2;
 r2 = 3;
 
 % Define a grid of x and y values for contour plot
-x = -3:0.1:3;
+x = -3:0.1:5;
 y = -3:0.1:3;
 [X, Y] = meshgrid(x, y);
 
@@ -66,11 +71,15 @@ end
 
 % Create a contour plot of the cost function
 figure;
-contour(X, Y, cost, 300); % Adjust the number of contour lines as needed
+c = contour(X, Y, cost, 300); % Adjust the number of contour lines as needed
+hold;
+plot(a1(1), a1(2), 'r.', 'MarkerSize', 20); % Display an Anchor
+plot(a2(1), a2(2), 'r.', 'MarkerSize', 20); % Display an Anchor
 xlabel('x');
 ylabel('y');
 title('Cost Function Contour Plot');
 colorbar;
+saveas(gcf,"Task2.png");
 
 % Create a 3D plot of the cost function
 figure;
@@ -115,11 +124,16 @@ x = linspace(0, 4, 500);
 cost = max(abs(x - a) - r, 0).^2;
 
 % Plot the cost function
-plot(x, cost);
+plot(x, cost, 'LineWidth',2,'DisplayName', 'Cost Function');
+hold;
+plot(a, 0, '.', 'MarkerSize', 15, 'DisplayName', 'Anchor'); % Display an Anchor
+set(gca, 'YLim', [-0.25, 1.4]); % Set Limits on Y Axis
 xlabel('x');
 ylabel('Cost');
 title('Cost Function: max(|x - a| - r, 0)^2');
 grid on;
+legend('Location', 'Best'); % Add Legend
+saveas(gcf,"Task3a.png");
 
 
 
@@ -151,10 +165,14 @@ end
 % Create a contour plot of the cost function
 figure;
 contour(X, Y, cost, 100); % Adjust the number of contour lines as needed
+hold;
+plot(a1(1), a1(2), 'r.', 'MarkerSize', 20); % Display an Anchor
+plot(a2(1), a2(2), 'r.', 'MarkerSize', 20); % Display an Anchor
 xlabel('x');
 ylabel('y');
 title('Cost Function Contour Plot (Convex Approximation)');
 colorbar;
+saveas(gcf,"Task3b.png");
 
 %Cost function
 figure;
