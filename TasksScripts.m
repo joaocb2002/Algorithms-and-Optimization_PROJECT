@@ -332,8 +332,10 @@ colorbar;
 
 % Add marker for anchor position
 hold on;
-plot(a(1), a(2), 'ro', 'MarkerSize', 10, 'MarkerFaceColor', 'r');
+plot(a(1), a(2), 'r.', 'MarkerSize', 15);
 hold off;
+
+saveas(gcf,"Task7a.png");
 
 
 %% 7b
@@ -350,8 +352,8 @@ u1_angle = deg2rad(40); % Angle in radians
 u2_angle = deg2rad(140); % Angle in radians
 
 % Create a grid of x and y values for the contour plot
-x = -3:0.1:6;
-y = -2:0.1:2;
+x = -6:0.1:9;
+y = -2:0.1:5;
 [X, Y] = meshgrid(x, y);
 
 % Initialize the cost function matrix
@@ -377,9 +379,11 @@ colorbar;
 
 % Add markers for anchor positions
 hold on;
-plot(a1(1), a1(2), 'ro', 'MarkerSize', 10, 'MarkerFaceColor', 'r');
-plot(a2(1), a2(2), 'bo', 'MarkerSize', 10, 'MarkerFaceColor', 'b');
+plot(a1(1), a1(2), 'r.', 'MarkerSize', 15);
+plot(a2(1), a2(2), 'r.', 'MarkerSize', 15);
 hold off;
+
+saveas(gcf,"Task7b.png");
 
 
 
