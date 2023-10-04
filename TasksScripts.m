@@ -386,7 +386,6 @@ hold off;
 saveas(gcf,"Task7b.png");
 
 
-
 %% Task 8
 
 clear;
@@ -457,7 +456,6 @@ xlabel('X (meters)');
 ylabel('Y (meters)');
 title('Generated 2D Trajectory with Anchors');
 
-
 x_min = -20;
 x_max = 20;
 y_min = -20;
@@ -506,14 +504,14 @@ disp(['There are ', num2str(k-1), ' points to interpolate from.'])
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Trajectory generation using cubic splines
 
-h = 0.01;
+%h = 0.01;
 npt = length(x);        % number of via points, including initial and final
 nvia = 0:1:npt-1;
 
 csinterp_x = csapi(nvia, x);
 csinterp_y = csapi(nvia, y);
 
-time = 0:h:npt-1;
+time = linspace(0, npt-1, 75); %0:h:npt-1;
 xx = fnval(csinterp_x, time);
 yy = fnval(csinterp_y, time);
 
@@ -525,10 +523,9 @@ yy = fnval(csinterp_y, time);
 plot(xx, yy);
 
 % Simulate target motion and record measurements
-T = 100; % Total number of samples
+T = length(time); %number of samples
 sample_rate = 2; % Hz
 dt = 1 / sample_rate;
-speed = 1.5; % m/s 
 trajectory = [xx; yy];
 
 % Initialize arrays to store measurements
@@ -536,16 +533,14 @@ ranges = zeros(T, 4); % Four anchors
 angles = zeros(T, 4); % Four anchors
 velocities = zeros(T, 1);
 
-% ESTA PARTE AINDA NÃO ESTÁ BEM MAS DEVO ACABAR EM BREVE
-
 for t = 1:T
     % Simulate target motion
-    if t > 1
+    if t < T
         % Compute velocity from consecutive positions
-        delta_position = trajectory(:, t) - trajectory(:, t - 1);
+        delta_position = trajectory(:, t+1) - trajectory(:, t); %formula 2 do enunciado
         velocity = norm(delta_position) / dt;
     else
-        velocity = speed; %initial speed
+        velocity = velocities(t-1); %final speed
     end
     
     velocities(t) = velocity;
