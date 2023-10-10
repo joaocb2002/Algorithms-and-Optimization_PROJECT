@@ -202,17 +202,31 @@ clc;
 a = 2;
 r = 1;
 
+x = linspace(0, 4, 500);
+cost = max(abs(x - a) - r, 0).^2;
+
 % Create CVX variable
 cvx_begin quiet
-    variable x(1)
+    variable xs(1)
     
     % Define the cost function using the convex approximation
-    minimize (square_pos(norm(x - a) - r))
+    minimize (square_pos(norm(xs - a) - r))
 cvx_end
 
 % Display the results
 disp('CVX Solution:');
-disp(['Target Position: x = ' num2str(x) ' ']);
+disp(['Target Position: x = ' num2str(xs) ' ']);
+
+plot(x, cost, 'LineWidth',2,'DisplayName', 'Cost Function');
+hold;
+plot(xs, 0, '.', 'MarkerSize', 15, 'DisplayName', 'CVX Solution'); % Display an Anchor
+set(gca, 'YLim', [-0.25, 2]); % Set Limits on Y Axis
+xlabel('x');
+ylabel('Cost');
+title('Cost Function: (|x - a| - r)^2 Convex Aproximation');
+grid on;
+legend('Location', 'Best'); % Add Legend
+saveas(gcf,"Task4a.png");
 
 
 
@@ -228,18 +242,42 @@ a2 = [3, 0];
 r1 = 2;
 r2 = 3;
 
+% Define a grid of x and y values for contour plot
+x = -3:0.1:6;
+y = -3:0.1:3;
+[X, Y] = meshgrid(x, y);
+
+% Initialize the cost function matrix
+cost = zeros(size(X));
+
+% Calculate the cost function using the convex approximation
+for i = 1:numel(X)
+    x_current = [X(i), Y(i)]; % Current (x, y) position
+    cost(i) = max(norm(x_current - a1) - r1, 0)^2 + max(norm(x_current - a2) - r2, 0)^2;
+end
+
 % Create CVX variables for the target's 2D position
 cvx_begin quiet
-    variable x(2)
+    variable xs(2)
     
     % Define the cost function using the convex approximation
-    minimize (square_pos(norm(x - a1') - r1) + square_pos(norm(x - a2') - r2))
+    minimize (square_pos(norm(xs - a1') - r1) + square_pos(norm(xs - a2') - r2))
 cvx_end
 
 % Display the results
 disp('CVX Solution:');
 disp(['Target Position (x, y): (' num2str(x(1)) ', ' num2str(x(2)) ')']);
 
+% Create a contour plot of the cost function
+figure;
+contour(X, Y, cost, 100); % Adjust the number of contour lines as needed
+hold;
+plot(xs(1), xs(2), 'r.', 'MarkerSize', 20); % Display an Anchor
+xlabel('x');
+ylabel('y');
+title('Cost Function Contour Plot (Convex Approximation)');
+colorbar;
+saveas(gcf,"Task4b.png");
 
 
 % In the context of localization problems, it's important to note that applying 
