@@ -71,7 +71,8 @@ end
 
 % Create a contour plot of the cost function
 figure;
-c = contour(X, Y, cost, 300); % Adjust the number of contour lines as needed
+c = contour(X, Y, cost, 50); % Adjust the number of contour lines as needed
+%surf(X,Y,cost)
 hold;
 plot(a1(1), a1(2), 'r.', 'MarkerSize', 20); % Display an Anchor
 plot(a2(1), a2(2), 'r.', 'MarkerSize', 20); % Display an Anchor
@@ -80,15 +81,6 @@ ylabel('y');
 title('Cost Function Contour Plot');
 colorbar;
 saveas(gcf,"Task2.png");
-
-% Create a 3D plot of the cost function
-figure;
-surf(X, Y, cost);
-xlabel('x');
-ylabel('y');
-zlabel('Cost');
-title('Cost Function 3D Plot');
-
 
 % Minimizer Uniqueness: 
 % The minimizer for this problem is not unique because there are two intersection 
