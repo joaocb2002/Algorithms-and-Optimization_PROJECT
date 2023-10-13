@@ -542,6 +542,7 @@ csinterp_x = csapi(nvia, x);
 csinterp_y = csapi(nvia, y);
 
 time = linspace(0, npt-1, 75); %0:h:npt-1;
+
 xx = fnval(csinterp_x, time);
 yy = fnval(csinterp_y, time);
 
@@ -550,7 +551,7 @@ yy = fnval(csinterp_y, time);
 % yy = yy / y_scale + yy_org;
 
 % Plot the generated trajectory 
-plot(xx, yy);
+plot(xx, yy, 'ro-');
 
 % Simulate target motion and record measurements
 T = length(time); %number of samples
@@ -561,19 +562,23 @@ trajectory = [xx; yy];
 % Initialize arrays to store measurements
 ranges = zeros(T, 4); % Four anchors
 angles = zeros(T, 4); % Four anchors
-velocities = zeros(T, 1);
+velocities = zeros(2, T);
 
 for t = 1:T
     % Simulate target motion
-    if t < T
-        % Compute velocity from consecutive positions
-        delta_position = trajectory(:, t+1) - trajectory(:, t); %formula 2 do enunciado
-        velocity = norm(delta_position) / dt;
+    if t == 1
+        delta_position = trajectory(:, t+1) - trajectory(:, t); %initial speed
+        velocity = (delta_position) / dt; 
+    elseif t == T 
+        delta_position = trajectory(:, t-1) - trajectory(:, t); %final speed
+        velocity = (delta_position) / dt;  
     else
-        velocity = velocities(t-1); %final speed
+        % Compute velocity from consecutive positions
+        delta_position = trajectory(:, t+1) - trajectory(:, t-1); %formula 3 do enunciado
+        velocity = (delta_position) / (2*dt);
     end
     
-    velocities(t) = velocity;
+    velocities(:, t) = velocity; %Set of velocity vectors
     
     % Compute range and angle measurements for each anchor
     for anchor_idx = 1:4
@@ -586,6 +591,168 @@ for t = 1:T
         ranges(t, anchor_idx) = range;
         angles(t, anchor_idx) = rad2deg(angle); %save angle in degrees
     end
+end
+
+%We saved ranges, angles and velocities
+
+
+%% Task 10 - Trajectory Estimation with Motion
+
+close all;
+clear;
+clc;
+
+figure;
+xlim([-21, 21]);
+ylim([-21, 21]);
+grid on;
+hold on;
+xlabel('X (meters)');
+ylabel('Y (meters)');
+title('Generated 2D Trajectory with Anchors');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define the bounding box and scaling factors
+x_min = -20;
+x_max = 20;
+y_min = -20;
+y_max = 20;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Generate the bounding box vertices
+box_vertices = [x_min, y_min; x_min, y_max; x_max, y_min; x_max, y_max];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Place static anchors near the box vertices (adjust positions as needed)
+anchors = box_vertices - 1 + 2*rand(4, 2);
+plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
+
+% Plot the actual bounding box
+rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Defining trajectory mandatory points
+
+disp(' ')
+disp('Use the mouse to input via points for the reference trajectory.');
+disp('Press --button 3-- to end the input.');
+disp(' ');
+button = 1;
+k = 1;
+
+
+
+while button == 1
+    [x(k), y(k), button] = ginput(1);
+    
+    % Ensure points stay within the bounding box
+    x(k) = max(min(x(k), x_max), x_min);
+    y(k) = max(min(y(k), y_max), y_min);
+    
+    plot(x(k), y(k), 'r+', 'Linewidth', 2);
+    k = k + 1;
+end
+
+drawnow;
+disp(' ')
+disp(['There are ', num2str(k-1), ' points to interpolate from.'])
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Trajectory generation using cubic splines
+
+npt = length(x);        % number of via points, including initial and final
+nvia = 0:1:npt-1;
+
+csinterp_x = csapi(nvia, x);
+csinterp_y = csapi(nvia, y);
+
+T = 75; %number of samples
+time = linspace(0, npt-1, T); 
+xx = fnval(csinterp_x, time);
+yy = fnval(csinterp_y, time);
+
+% Plot the generated trajectory ('real one')
+plot(xx, yy, 'ro-');
+
+% Simulate target motion and record measurements
+sample_rate = 2; % Hz
+dt = 1 / sample_rate;
+trajectory = [xx; yy];
+
+% Initialize arrays to store measurements
+ranges = zeros(T, 4); % Four anchors
+angles = zeros(T, 4); % Four anchors
+velocities = zeros(2, T);
+
+for t = 1:T
+    % Simulate target motion
+    if t == 1
+        delta_position = trajectory(:, t+1) - trajectory(:, t); %initial speed
+        velocity = (delta_position) / dt; 
+    elseif t == T 
+        delta_position = trajectory(:, t-1) - trajectory(:, t); %final speed
+        velocity = (delta_position) / dt;  
+    else
+        % Compute velocity from consecutive positions
+        delta_position = trajectory(:, t+1) - trajectory(:, t-1); %formula 3 do enunciado
+        velocity = (delta_position) / (2*dt);
+    end
+    
+    velocities(:, t) = 0.8*velocity; %Set of velocity vectors (0.8 introduces an inconsistency)
+    
+    % Compute range and angle measurements for each anchor
+    for anchor_idx = 1:4
+        anchor_position = anchors(anchor_idx, :);
+        target_position = trajectory(:, t)';
+        delta = target_position - anchor_position;
+        range = norm(delta);
+        angle = atan2(delta(2), delta(1));
+        
+        ranges(t, anchor_idx) = range;
+        angles(t, anchor_idx) = rad2deg(angle); %save angle in degrees
+    end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define optimization variables and find optimal trajectory for obtained
+% measurements
+cvx_begin quiet
+    variable x(2, T)
+    
+    % Define the cost function
+    cost = 0;
+    mu = 100; % Value of mu
+    for t = 1:T
+        
+        %Range measurements part
+        for anchor_idx = 1:4
+            anchor_position = anchors(anchor_idx, :);
+            delta = x(:, t) - anchor_position';
+            range = norm(delta);
+            cost = cost + square_pos(range - ranges(t, anchor_idx));
+        end
+        
+        %Velocities part
+        if t == T
+            veloc = (x(:, t-1) - x(:, t))/dt;
+        elseif t == 1
+            veloc = (x(:, t+1) - x(:, t))/dt;
+        else
+            veloc = (x(:, t+1) - x(:, t-1))/(2*dt);
+        end
+            
+        cost = cost + mu * square_pos(norm(veloc - velocities(:, t)));
+    end
+    
+    minimize(cost)
+    
+cvx_end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Plot the optimizated trajectory 
+for t = 1:T
+    plot(x(1, t), x(2, t), 'bx');
 end
 
 
