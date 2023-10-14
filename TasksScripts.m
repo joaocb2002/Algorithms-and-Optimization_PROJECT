@@ -74,8 +74,8 @@ figure;
 c = contour(X, Y, cost, 50); % Adjust the number of contour lines as needed
 %surf(X,Y,cost)
 hold;
-plot(a1(1), a1(2), 'r.', 'MarkerSize', 20); % Display an Anchor
-plot(a2(1), a2(2), 'r.', 'MarkerSize', 20); % Display an Anchor
+%plot(a1(1), a1(2), 'r.', 'MarkerSize', 20); % Display an Anchor
+%plot(a2(1), a2(2), 'r.', 'MarkerSize', 20); % Display an Anchor
 xlabel('x');
 ylabel('y');
 title('Cost Function Contour Plot');
@@ -345,23 +345,26 @@ y = -2:0.1:2;
 % Initialize the cost function matrix
 cost = zeros(size(X));
 
+direction = [cos(u_angle), sin(u_angle)]; % Convert polar angle to direction vector
+
 % Calculate the cost function for each point in the grid
 for i = 1:numel(X)
     x_current = [X(i), Y(i)]; % Current (x, y) position
-    direction = [cos(u_angle), sin(u_angle)]; % Convert polar angle to direction vector
     cost(i) = norm((eye(2) - direction' * direction) * (x_current - a)')^2;
 end
 
 % Create a contour plot of the cost function
 figure;
 contour(X, Y, cost, 100); % Adjust the number of contour lines as needed
+%surf(X,Y,cost)
 xlabel('x');
 ylabel('y');
-title('Angular Cost Function Contour Plot (Single Anchor)');
+title('Angular Cost Function Contour Plot - u = 40º');
 colorbar;
 
 % Add marker for anchor position
 hold on;
+quiver(a(1), a(2), direction(1), direction(2), 'b', 'LineWidth', 1, 'MaxHeadSize', 0.5);
 plot(a(1), a(2), 'r.', 'MarkerSize', 15);
 hold off;
 
@@ -389,11 +392,12 @@ y = -2:0.1:5;
 % Initialize the cost function matrix
 cost = zeros(size(X));
 
+direction1 = [cos(u1_angle), sin(u1_angle)]; % Convert polar angle to direction vector for u1
+direction2 = [cos(u2_angle), sin(u2_angle)]; % Convert polar angle to direction vector for u2
+
 % Calculate the cost function for each point in the grid
 for i = 1:numel(X)
     x_current = [X(i), Y(i)]; % Current (x, y) position
-    direction1 = [cos(u1_angle), sin(u1_angle)]; % Convert polar angle to direction vector for u1
-    direction2 = [cos(u2_angle), sin(u2_angle)]; % Convert polar angle to direction vector for u2
     cost1 = norm((eye(2) - direction1' * direction1) * (x_current - a1)')^2;
     cost2 = norm((eye(2) - direction2' * direction2) * (x_current - a2)')^2;
     cost(i) = cost1 + cost2;
@@ -402,13 +406,17 @@ end
 % Create a contour plot of the cost function
 figure;
 contour(X, Y, cost, 100); % Adjust the number of contour lines as needed
+%surf(X,Y,cost);
 xlabel('x');
 ylabel('y');
-title('Angular Cost Function Contour Plot (Two Anchors)');
+title('Angular Cost Function Contour Plot - u1 = 40º and u2 = 140º');
+set(gca, 'YLim', [-2, 5]); % Set Limits on Y Axis
 colorbar;
 
 % Add markers for anchor positions
 hold on;
+quiver(a1(1), a1(2), direction1(1), direction1(2), 'b', 'LineWidth', 1, 'MaxHeadSize', 0.5);
+quiver(a2(1), a2(2), direction2(1), direction2(2), 'b', 'LineWidth', 1, 'MaxHeadSize', 0.5);
 plot(a1(1), a1(2), 'r.', 'MarkerSize', 15);
 plot(a2(1), a2(2), 'r.', 'MarkerSize', 15);
 hold off;
