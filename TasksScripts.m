@@ -1161,6 +1161,112 @@ end
 % improving trajectory estimation accuracy.
 
 
+%% TASK 13
+% Define parameters
+clear;
+close all;
+clc;
+
+% Define the bounding box
+x_min = -20;  % Minimum x-coordinate
+x_max = 20;   % Maximum x-coordinate
+y_min = -20;  % Minimum y-coordinate
+y_max = 20;   % Maximum y-coordinate
+
+% Plot the bounding box
+rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'EdgeColor', 'r', 'LineWidth', 2);
+
+
+% Define the single anchor position
+anchor_x = rand * (x_max - x_min) + x_min;  % Randomly place the anchor within the bounding box
+anchor_y = 20;  % Place the anchor at y = 20
+
+anchor = [anchor_x, anchor_y];  % Create a 2D coordinate for the anchor
+
+% Plot the single anchor
+plot(anchor_x, anchor_y, 'go', 'MarkerSize', 10, 'MarkerFaceColor', 'g');
+hold on 
+
+% Illustrate the bounding box
+x_in = [x_min, x_max, x_max, x_min, x_min];
+y_in = [y_min, y_min, y_max, y_max, y_min];
+plot(x_in, y_in, 'b-', 'LineWidth', 2);
+
+% Set axis limits to match the bounding box
+axis([x_min - 5, x_max + 5, y_min - 5, y_max + 5]);
+
+% Generate the trajectory
+disp('Use the mouse to input via points for the reference trajectory');
+disp('--button 3-- to end the input');
+button = 1;
+k = 1;
+
+while button == 1
+    [x(k), y(k), button] = ginput(1);
+    plot(x(k), y(k), 'r+');
+    k = k + 1;
+end
+
+drawnow;
+disp([num2str(k - 1), ' points to interpolate from']);
+
+% Generating the trajectory
+npt = length(x);        % Number of via points, including initial and final
+nvia = 0:1:npt - 1;     % Array to store the indices of the via points 
+csinterp_x = csapi(nvia, x);    % Smooth lines that connect the via points 
+csinterp_y = csapi(nvia, y);     
+time = linspace(0, npt - 1, 75);   % Generate 75 points from 0 to 2
+xx = fnval(csinterp_x, time);
+yy = fnval(csinterp_y, time);
+plot(xx, yy, 'ro');
+
+% Simulate target motion and record measurements
+T = length(time); %number of samples
+sample_rate = 4; % Hz
+dt = 1 / sample_rate;
+trajectory = [xx; yy];
+
+% Initialize arrays to store measurements
+ranges = zeros(T, 1); % Now only 1 anchor
+range_rates = zeros(T, 1);
+velocities = zeros(2, T);
+norma_das_velocidades = zeros(1,T);
+angles = zeros(T, 1);
+directions = zeros(2,T);
+
+
+
+for t = 1:T
+    
+    % Simulate target motion
+    if t < T
+        % Compute velocity from consecutive positions
+        delta_position = trajectory(:, t+1) - trajectory(:, t); %formula 2 do enunciado
+        velocity = delta_position / dt;
+    else
+        velocity = velocities(t-1); %final speed
+    end
+    
+    velocities(:,t) = velocity;
+       
+    % Compute range and angle measurements for one anchor    
+    anchor_position = anchor(1, :);
+    target_position = trajectory(:, t)';
+    delta = target_position - anchor_position;
+    range = norm(delta);
+    angle = atan2(delta(2), delta(1));
+    ranges(t, 1) = range;
+    
+    %Just to check if the measurements are ok
+    angles(t, 1) = rad2deg(angle);  
+    
+    
+    %Compute the direction from the anchor pointing towards the target
+    directions(:,t) = [cos(angle), sin(angle)];  %Angle already in radians     
+    range_rates(t)= sum(velocities(:, t) .* directions(:, t));
+        
+end
+
 
 
 
