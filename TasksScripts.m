@@ -471,140 +471,7 @@ disp(['Target Position (x, y): (' num2str(x(1)) ', ' num2str(x(2)) ')']);
 
 
 
-%% Task 9 
-
-close all
-clear
-clc
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Define the bounding box and scaling factors
-
-% x_scale = 0.18107;
-% y_scale = 0.21394;
-% xx_org = 235;
-% yy_org = 258;
-
-figure;
-xlim([-21, 21]);
-ylim([-21, 21]);
-grid on;
-hold on;
-xlabel('X (meters)');
-ylabel('Y (meters)');
-title('Generated 2D Trajectory with Anchors');
-
-x_min = -20;
-x_max = 20;
-y_min = -20;
-y_max = 20;
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Generate the bounding box vertices
-box_vertices = [x_min, y_min; x_min, y_max; x_max, y_min; x_max, y_max];
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Place static anchors near the box vertices (adjust positions as needed)
-anchors = box_vertices - 1 + 2*rand(4, 2);
-plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
-
-% Plot the actual bounding box
-rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Defining trajectory mandatory points
-
-disp(' ')
-disp('Use the mouse to input via points for the reference trajectory.');
-disp('Press --button 3-- to end the input.');
-button = 1;
-k = 1;
-
-while button == 1
-    [x(k), y(k), button] = ginput(1);
-    
-    % Scale and translate coordinates to match the bounding box
-    % x(k) = (x(k) - xx_org) * x_scale;
-    % y(k) = (y(k) - yy_org) * y_scale;
-    
-    % Ensure points stay within the bounding box
-    x(k) = max(min(x(k), x_max), x_min);
-    y(k) = max(min(y(k), y_max), y_min);
-    
-    plot(x(k), y(k), 'r+', 'Linewidth', 2);
-    k = k + 1;
-end
-
-drawnow;
-disp(' ')
-disp(['There are ', num2str(k-1), ' points to interpolate from.'])
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Trajectory generation using cubic splines
-
-%h = 0.01;
-npt = length(x);        % number of via points, including initial and final
-nvia = 0:1:npt-1;
-
-csinterp_x = csapi(nvia, x);
-csinterp_y = csapi(nvia, y);
-
-time = linspace(0, npt-1, 75); %0:h:npt-1;
-
-xx = fnval(csinterp_x, time);
-yy = fnval(csinterp_y, time);
-
-% Scale and translate the generated trajectory back to world coordinates
-% xx = xx / x_scale + xx_org;
-% yy = yy / y_scale + yy_org;
-
-% Plot the generated trajectory 
-plot(xx, yy, 'ro-');
-
-% Simulate target motion and record measurements
-T = length(time); %number of samples
-sample_rate = 2; % Hz
-dt = 1 / sample_rate;
-trajectory = [xx; yy];
-
-% Initialize arrays to store measurements
-ranges = zeros(T, 4); % Four anchors
-angles = zeros(T, 4); % Four anchors
-velocities = zeros(2, T);
-
-for t = 1:T
-    % Simulate target motion
-    if t == 1
-        delta_position = trajectory(:, t+1) - trajectory(:, t); %initial speed
-        velocity = (delta_position) / dt; 
-    elseif t == T 
-        delta_position = trajectory(:, t-1) - trajectory(:, t); %final speed
-        velocity = (delta_position) / dt;  
-    else
-        % Compute velocity from consecutive positions
-        delta_position = trajectory(:, t+1) - trajectory(:, t-1); %formula 3 do enunciado
-        velocity = (delta_position) / (2*dt);
-    end
-    
-    velocities(:, t) = velocity; %Set of velocity vectors
-    
-    % Compute range and angle measurements for each anchor
-    for anchor_idx = 1:4
-        anchor_position = anchors(anchor_idx, :);
-        target_position = trajectory(:, t)';
-        delta = target_position - anchor_position;
-        range = norm(delta);
-        angle = atan2(delta(2), delta(1));
-        
-        ranges(t, anchor_idx) = range;
-        angles(t, anchor_idx) = rad2deg(angle); %save angle in degrees
-    end
-end
-
-%We saved ranges, angles and velocities
-
-
-%% Task 10 - Trajectory Estimation with Motion
+%% Task 9 and 10 - Trajectory Estimation with Motion
 
 close all;
 clear;
@@ -648,7 +515,6 @@ disp('Press --button 3-- to end the input.');
 disp(' ');
 button = 1;
 k = 1;
-
 
 
 while button == 1
@@ -722,15 +588,21 @@ for t = 1:T
     end
 end
 
+% We saved ranges, angles and velocities
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Define optimization variables and find optimal trajectory for obtained
 % measurements
+
+
+mu = 100; % Value of mu
+
+
 cvx_begin quiet
     variable x(2, T)
     
     % Define the cost function
     cost = 0;
-    mu = 100; % Value of mu
     for t = 1:T
         
         %Range measurements part
@@ -753,8 +625,7 @@ cvx_begin quiet
         cost = cost + mu * square_pos(norm(veloc - velocities(:, t)));
     end
     
-    minimize(cost)
-    
+    minimize(cost)  
 cvx_end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -762,6 +633,532 @@ cvx_end
 for t = 1:T
     plot(x(1, t), x(2, t), 'bx');
 end
+
+
+% Task 10 conclusion
+%
+% The objective of Task 10 is to investigate the influence of the parameter μ 
+% on the trajectory estimation problem. By varying the value of μ, we can observe 
+% how the optimization process balances the significance of the velocity 
+% measurements against the range measurements. This allows us to evaluate 
+% the trade-off between these two sources of information in the trajectory 
+% estimation process.
+% 
+% When we set μ to a very small value, such as μ = 0.01, the optimization 
+% trajectory closely aligns with the trajectory defined by interpolation. 
+% In this scenario, the term in the cost function associated with velocity 
+% measurements has a relatively low impact. Essentially, it suggests that 
+% adhering to velocity constraints is not a critical aspect of the optimization. 
+% Consequently, the solution predominantly adheres to the range measurements 
+% in the cost function.
+% 
+% Conversely, when μ is set to a significantly larger value, such as μ = 100, 
+% the optimization trajectory appears to be smaller in scale compared to the 
+% interpolation-based trajectory. This effect arises from the heightened 
+% importance of the term associated with velocity measurements in the cost 
+% function. The requirement to satisfy velocity constraints takes precedence 
+% over the range constraints in this case.
+% 
+% In summary, the parameter μ plays a pivotal role in determining the relative 
+% significance of velocity measurements in the cost function. A larger μ value 
+% places greater importance on velocity requirements, potentially leading to 
+% solutions that exhibit inconsistencies with the trajectory derived from range 
+% measurements. The choice of μ thus provides a means to fine-tune the balance 
+% between the impact of range and velocity measurements in the trajectory 
+% estimation process.
+
+
+
+%% Task 11
+close all;
+clear;
+clc;
+
+figure(1);
+xlim([-21, 21]);
+ylim([-21, 21]);
+grid on;
+hold on;
+xlabel('X (meters)');
+ylabel('Y (meters)');
+title('Generated 2D Trajectory with Anchors');
+
+%Bounding box
+x_min = -20;
+x_max = 20;
+y_min = -20;
+y_max = 20;
+box_vertices = [x_min, y_min; x_min, y_max; x_max, y_min; x_max, y_max];
+
+%Anchors
+anchors = box_vertices - 1 + 2*rand(4, 2);
+plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
+
+% Plot the actual bounding box and defining trajectory mandatory points
+rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
+disp(' ')
+disp('Use the mouse to input via points for the reference trajectory.');
+disp('Press --button 3-- to end the input.');
+disp(' ');
+button = 1;
+k = 1;
+
+while button == 1
+    [x(k), y(k), button] = ginput(1);
+    
+    % Ensure points stay within the bounding box
+    x(k) = max(min(x(k), x_max), x_min);
+    y(k) = max(min(y(k), y_max), y_min);
+    
+    plot(x(k), y(k), 'r+', 'Linewidth', 2);
+    k = k + 1;
+end
+
+drawnow;
+disp(' ')
+disp(['There are ', num2str(k-1), ' points to interpolate from.'])
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Trajectory generation using cubic splines
+
+npt = length(x);        % number of via points, including initial and final
+nvia = 0:1:npt-1;
+
+csinterp_x = csapi(nvia, x);
+csinterp_y = csapi(nvia, y);
+
+T = 75; %number of samples
+time = linspace(0, npt-1, T); 
+xx = fnval(csinterp_x, time);
+yy = fnval(csinterp_y, time);
+
+% Plot the generated trajectory ('real one')
+plot(xx, yy, 'ro-');
+
+% Simulate target motion and record measurements
+sample_rate = 2; % Hz
+dt = 1 / sample_rate;
+trajectory = [xx; yy];
+
+% Initialize arrays to store measurements
+ranges = zeros(T, 4); % Four anchors
+angles = zeros(T, 4); % Four anchors
+velocities = zeros(2, T);
+
+for t = 1:T
+    % Simulate target motion
+    if t == 1
+        delta_position = trajectory(:, t+1) - trajectory(:, t); %initial speed
+        velocity = (delta_position) / dt; 
+    elseif t == T 
+        delta_position = trajectory(:, t-1) - trajectory(:, t); %final speed
+        velocity = (delta_position) / dt;  
+    else
+        % Compute velocity from consecutive positions
+        delta_position = trajectory(:, t+1) - trajectory(:, t-1); %formula 3 do enunciado
+        velocity = (delta_position) / (2*dt);
+    end
+    
+    velocities(:, t) = 0.8*velocity; %Set of velocity vectors (0.8 introduces an inconsistency)
+    
+    % Compute range and angle measurements for each anchor
+    for anchor_idx = 1:4
+        anchor_position = anchors(anchor_idx, :);
+        target_position = trajectory(:, t)';
+        delta = target_position - anchor_position;
+        range = norm(delta);
+        angle = atan2(delta(2), delta(1));
+        
+        ranges(t, anchor_idx) = range;
+        angles(t, anchor_idx) = rad2deg(angle); %save angle in degrees
+    end
+end
+
+% We saved ranges, angles and velocities from the 'real trajectory'
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define optimization variables and find optimal trajectory for obtained
+% measurements and determine range and velocity error calculation
+
+values = [0.01, 0.05, 0.1, 0.5, 1, 5, 10, 50, 100, 1000]; % Value of mu
+
+RE = zeros(1, length(values));
+VE = zeros(1, length(values));
+
+for k = 1:length(values)
+    mu = values(k);
+    
+   
+    cvx_begin quiet
+        variable x(2, T)
+
+        % Define the cost function
+        cost = 0;
+        for t = 1:T
+
+            %Range measurements part
+            for anchor_idx = 1:4
+                anchor_position = anchors(anchor_idx, :);
+                delta = x(:, t) - anchor_position';
+                range = norm(delta);
+                cost = cost + square_pos(range - ranges(t, anchor_idx));
+            end
+
+            %Velocities part
+            if t == T
+                veloc = (x(:, t-1) - x(:, t))/dt;
+            elseif t == 1
+                veloc = (x(:, t+1) - x(:, t))/dt;
+            else
+                veloc = (x(:, t+1) - x(:, t-1))/(2*dt);
+            end
+
+            cost = cost + mu * square_pos(norm(veloc - velocities(:, t)));
+        end
+
+        minimize(cost)  
+    cvx_end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Plot the optimizated trajectory 
+    figure(k+1);
+    xlim([-21, 21]);
+    ylim([-21, 21]);
+    grid on;
+    hold on;
+    xlabel('X (meters)');
+    ylabel('Y (meters)');
+    title(['Optimization 2D Trajectory for \mu = ', num2str(mu)]);
+    plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
+    rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
+    plot(xx, yy, 'ro-'); %Real Trajectory
+    
+    for t = 1:T
+        plot(x(1, t), x(2, t), 'bx'); %Optimization trajectory
+    end
+
+    for i=1:T 
+        for anchor_idx = 1:4
+            anchor_position = anchors(anchor_idx, :);
+            delta = x(:, t) - anchor_position';
+            range = norm(delta);
+            RE(1, k) = RE(1, k) + (abs((range - ranges(t, anchor_idx))))^2;
+        end
+
+        if t == T
+            veloc = (x(:, t-1) - x(:, t))/dt;
+        elseif t == 1
+            veloc = (x(:, t+1) - x(:, t))/dt;
+        else
+            veloc = (x(:, t+1) - x(:, t-1))/(2*dt);
+        end
+
+        VE(1, k) = (norm(veloc - velocities(:, t)))^2;
+
+    end
+end
+
+% Plot the Range Error (RE) vs Velocity Error (VE)
+figure;
+semilogx(RE, VE, 'ro-');
+title('2D plot for RE(\mu) vs VE(\mu)');
+xlabel('Range Error (RE)');
+ylabel('Velocity Error (VE)');
+grid on
+axis tight
+
+
+%Conclusion
+
+% In Task 11, we extended our exploration of trajectory estimation with motion, 
+% focusing on the influence of the regularization parameter μ on the quality 
+% of our optimization results. Our primary objective was to investigate how the
+% choice of μ affects the trade-off between Range Error (RE) and Velocity Error 
+% (VE) within the context of trajectory optimization.
+% 
+% We initially generated a reference trajectory and introduced inconsistencies 
+% by scaling down velocity measurements. This deliberate incongruity allowed 
+% us to assess how different values of μ affect the optimization results. 
+% Through a series of optimization processes for distinct μ values, we observed 
+% that the resulting 2D plot of RE (x-axis) vs VE (y-axis) exhibits a distinct 
+% hyperbolic shape.
+% 
+% 
+% This plot's characteristics are insightful:
+% 
+% Inverse Relationship with μ: As μ increases, the Velocity Error (VE) tends to decrease 
+% while the Range Error (RE) simultaneously increases. Conversely, smaller μ 
+% values lead to higher VE and lower RE. This relationship signifies that the 
+% choice of μ strongly influences the optimization results.
+% 
+% Trade-off between Error Types: The hyperbolic shape indicates a clear trade-off 
+% between VE and RE. When optimizing with greater μ, the optimization process 
+% places greater emphasis on satisfying the velocity constraints, 
+% consequently yielding lower VE but higher RE. Conversely, smaller μ values 
+% prioritize the range measurements, yielding lower RE but higher VE.
+% 
+% This observation aligns with our previous findings in Task 10, where we found 
+% that smaller μ values make the velocity requirements less critical, while 
+% larger μ values prioritize velocity constraints over range constraints.
+
+%Note: Proving RE vs VE is decreasing is in a pdf file in GitHub
+
+
+%% Task 12
+
+close all;
+clear;
+clc;
+
+figure;
+xlim([-21, 21]);
+ylim([-21, 21]);
+grid on;
+hold on;
+xlabel('X (meters)');
+ylabel('Y (meters)');
+title('Generated 2D Trajectory with Anchors');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define the bounding box and scaling factors
+x_min = -20;
+x_max = 20;
+y_min = -20;
+y_max = 20;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Generate the bounding box vertices
+box_vertices = [x_min, y_min; x_min, y_max; x_max, y_min; x_max, y_max];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Place static anchors near the box vertices (adjust positions as needed)
+anchors = box_vertices - 1 + 2*rand(4, 2);
+plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
+
+% Plot the actual bounding box
+rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Defining trajectory mandatory points
+
+disp(' ')
+disp('Use the mouse to input via points for the reference trajectory.');
+disp('Press --button 3-- to end the input.');
+disp(' ');
+button = 1;
+k = 1;
+
+
+while button == 1
+    [x(k), y(k), button] = ginput(1);
+    
+    % Ensure points stay within the bounding box
+    x(k) = max(min(x(k), x_max), x_min);
+    y(k) = max(min(y(k), y_max), y_min);
+    
+    plot(x(k), y(k), 'r+', 'Linewidth', 2);
+    k = k + 1;
+end
+
+drawnow;
+disp(' ')
+disp(['There are ', num2str(k-1), ' points to interpolate from.'])
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Trajectory generation using cubic splines
+
+npt = length(x);        % number of via points, including initial and final
+nvia = 0:1:npt-1;
+
+csinterp_x = csapi(nvia, x);
+csinterp_y = csapi(nvia, y);
+
+T = 75; %number of samples
+time = linspace(0, npt-1, T); 
+xx = fnval(csinterp_x, time);
+yy = fnval(csinterp_y, time);
+
+% Plot the generated trajectory ('real one')
+plot(xx, yy, 'ro-');
+
+% Simulate target motion and record measurements
+sample_rate = 2; % Hz
+dt = 1 / sample_rate;
+trajectory = [xx; yy];
+
+% Initialize arrays to store measurements
+ranges = zeros(T, 4); % Four anchors
+angles = zeros(T, 4); % Four anchors
+velocities = zeros(2, T);
+
+for t = 1:T
+    % Simulate target motion
+    if t == 1
+        delta_position = trajectory(:, t+1) - trajectory(:, t); %initial speed
+        velocity = (delta_position) / dt; 
+    elseif t == T 
+        delta_position = trajectory(:, t-1) - trajectory(:, t); %final speed
+        velocity = (delta_position) / dt;  
+    else
+        % Compute velocity from consecutive positions
+        delta_position = trajectory(:, t+1) - trajectory(:, t-1); %formula 3 do enunciado
+        velocity = (delta_position) / (2*dt);
+    end
+    
+    velocities(:, t) = 1*velocity; %Set of velocity vectors (0.8 introduces an inconsistency)
+    
+    % Compute range and angle measurements for each anchor
+    for anchor_idx = 1:4
+        anchor_position = anchors(anchor_idx, :);
+        target_position = trajectory(:, t)';
+        delta = target_position - anchor_position;
+        range = norm(delta);
+        angle = atan2(delta(2), delta(1));
+        
+        ranges(t, anchor_idx) = range;
+        angles(t, anchor_idx) = rad2deg(angle); %save angle in degrees
+    end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Add Gaussian white noise to range and velocity measurements
+std_dev_range = 0.1; % Standard deviation for range measurements (0.1m)
+std_dev_velocity = 0.1 / sqrt(2); % Standard deviation for velocity measurements (0.1/√2 m/s)
+
+noisy_ranges = ranges + std_dev_range * randn(T, 4);
+noisy_velocities = velocities + std_dev_velocity * randn(2, T);
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Define optimization variables and find optimal trajectory for obtained
+% measurements
+
+
+mu = 0; % Value of mu. We gonna test it for mu=0 and mu=1
+
+while mu < 2
+    cvx_begin quiet
+        variable x(2, T)
+
+        % Define the cost function
+        cost = 0;
+        for t = 1:T
+
+            %Range measurements part
+            for anchor_idx = 1:4
+                anchor_position = anchors(anchor_idx, :);
+                delta = x(:, t) - anchor_position';
+                range = norm(delta);
+                cost = cost + square_pos(range - noisy_ranges(t, anchor_idx));
+            end
+
+            %Velocities part
+            if t == T
+                veloc = (x(:, t-1) - x(:, t))/dt;
+            elseif t == 1
+                veloc = (x(:, t+1) - x(:, t))/dt;
+            else
+                veloc = (x(:, t+1) - x(:, t-1))/(2*dt);
+            end
+
+            cost = cost + mu * square_pos(norm(veloc - noisy_velocities(:, t)));
+        end
+
+        minimize(cost)  
+    cvx_end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Plot the optimizated trajectory 
+    figure;
+    xlim([-21, 21]);
+    ylim([-21, 21]);
+    grid on;
+    hold on;
+    xlabel('X (meters)');
+    ylabel('Y (meters)');
+    title(['Optimization 2D Trajectory for \mu = ', num2str(mu)]);
+    plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
+    rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
+    plot(xx, yy, 'ro-'); %Real Trajectory
+
+
+    for t = 1:T
+        plot(x(1, t), x(2, t), 'bx'); %Optimized trajectory
+    end
+    
+    % Compute the global mean navigation error (MNE)
+    mean_navigation_error = 0;
+    for t = 1:T
+        error_at_t = norm(x(:, t) - trajectory(:, t));
+        mean_navigation_error = mean_navigation_error + error_at_t;
+    end
+    mean_navigation_error = (1 / T) * mean_navigation_error;
+
+    % Display the global mean navigation error
+    fprintf('\nGlobal Mean Navigation Error (MNE)for u = %.0f: %f\n', mu, mean_navigation_error);
+
+    mu = mu + 1;
+end
+
+
+% % Conclusion
+% 
+% Global Mean Navigation Error (MNE)for u = 0: 0.091678
+% 
+% Global Mean Navigation Error (MNE)for u = 1: 0.064157
+
+
+% Is the error distributed uniformly across the trajectories?
+% 
+% Indeed, it appears that the error is distributed relatively uniformly across 
+% the trajectories. This uniform distribution of error implies that the 
+% optimization variables (position and velocity) do not exhibit significant 
+% deviations from their real trajectory counterparts. The errors introduced 
+% in both range and velocity measurements seem to be distributed consistently
+% over the entire trajectory. This behavior is indicative of a well-balanced 
+% optimization process.
+% 
+% Furthermore, when the regularization parameter μ is set to 1, the velocity 
+% measurements play a significant role in improving the trajectory accuracy. 
+% This inclusion of velocity information allows the optimization to produce 
+% a more accurate trajectory. Consequently, the global mean navigation error 
+% (MNE) is smaller when μ is equal to 1, indicating a more faithful 
+% representation of the real trajectory. This result suggests that 
+% incorporating velocity measurements, when available, can lead to better 
+% trajectory estimation.
+% 
+% 
+% 
+% What happens as you reduce the number of anchors?
+% 
+% When the number of anchors is reduced, it has the potential to impact the 
+% uniform distribution of error across the trajectory. With fewer anchors, 
+% there are fewer measurements available for the optimization process. As a 
+% result, the errors induced in each measurement can have a more pronounced 
+% effect on the trajectory estimation. The smaller number of measurements 
+% reduces the ability to "cancel out" or "balance" these errors. This is 
+% particularly noticeable in scenarios where the measurements' errors, both 
+% in range and velocity, are significant.
+% 
+% In the context of fewer anchors, the optimization process may encounter 
+% greater difficulty in producing a trajectory that closely matches the real 
+% trajectory. The decreased redundancy in measurements could result in a trajectory 
+% that deviates more from the actual motion of the target. Therefore, 
+% in such scenarios, the error distribution across the trajectory may be 
+% less uniform compared to cases with a greater number of anchors.
+% 
+% In conclusion, the uniform distribution of error in trajectory estimation 
+% is influenced by factors such as the value of μ and the number of available 
+% anchor measurements. Smaller values of μ, especially when incorporating 
+% velocity data, tend to lead to more accurate trajectory estimates. 
+% Conversely, reducing the number of anchors may disrupt the uniformity 
+% of error distribution, potentially causing the trajectory to deviate 
+% further from the real motion of the target. These insights emphasize the 
+% importance of measurement redundancy and appropriate regularization in 
+% improving trajectory estimation accuracy.
 
 
 
