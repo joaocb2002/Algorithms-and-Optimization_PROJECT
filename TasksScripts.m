@@ -1036,7 +1036,7 @@ noisy_velocities = velocities + std_dev_velocity * randn(2, T);
 % Define optimization variables and find optimal trajectory for obtained
 % measurements
 
-
+disp(ranges)
 mu = 0; % Value of mu. We gonna test it for mu=0 and mu=1
 
 while mu < 2
@@ -1218,6 +1218,9 @@ csinterp_y = csapi(nvia, y);
 time = linspace(0, npt - 1, 75);   % Generate 75 points from 0 to 2
 xx = fnval(csinterp_x, time);
 yy = fnval(csinterp_y, time);
+
+x0 = [xx(1),yy(1)]; % Initial position
+
 plot(xx, yy, 'ro');
 
 % Simulate target motion and record measurements
@@ -1234,7 +1237,7 @@ norma_das_velocidades = zeros(1,T);
 angles = zeros(T, 1);
 directions = zeros(2,T);
 
-
+anchor_position = anchor(1, :);
 
 for t = 1:T
     
@@ -1250,7 +1253,6 @@ for t = 1:T
     velocities(:,t) = velocity;
        
     % Compute range and angle measurements for one anchor    
-    anchor_position = anchor(1, :);
     target_position = trajectory(:, t)';
     delta = target_position - anchor_position;
     range = norm(delta);
@@ -1267,9 +1269,50 @@ for t = 1:T
         
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Add Gaussian white noise to range and velocity measurements
+std_dev_range = 0.1; % Standard deviation for range measurements (0.1m)
 
+noisy_ranges = ranges + std_dev_range * randn(T, 1);
+noisy_range_rates = range_rates + std_dev_range * randn(T, 1);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% TASK 14
 
+close all;
+
+% Define anchor locations 
+a = anchor_position;
+nu = 1;
+
+% Define a grid of x and y values for contour plot
+vx = -3:0.1:3;
+vy = -3:0.1:3;
+[Vx, Vy] = meshgrid(vx, vy);
+
+% Initialize the cost function matrix
+cost = zeros(size(Vx));
+
+% Calculate the cost function 
+for i = 1:numel(Vx);
+    v_current = [Vx(i), Vy(i)]; % Current velocity 
+    for t = 1:T
+        rhat = norm(x0 + v_current*t - a);
+        shat = (norm(x0 + v_current*(t+1) - a) - norm(x0 + v_current*(t) - a))/1;
+        cost(i) = cost(i) + (rhat - ranges(t))^2 + nu*(shat - range_rates(t))^2;
+    end
+end
+
+% Create a contour plot of the cost function
+figure;
+contour(Vy, Vx, cost, 100); % Adjust the number of contour lines as needed
+hold;
+plot(velocities(:,1),velocities(:,2),'b'); % Plot real velocities
+xlabel('x');
+ylabel('y');
+title('Cost Function Contour Plot');
+colorbar;
+saveas(gcf,"Task14.png");
 
 
 
