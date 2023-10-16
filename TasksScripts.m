@@ -511,15 +511,20 @@ rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth',
 
 disp(' ')
 disp('Use the mouse to input via points for the reference trajectory.');
-disp('Press --button 3-- to end the input.');
+disp('Press Space key to end the input.');
 disp(' ');
-button = 1;
 k = 1;
 
 
-while button == 1
+while 1
     [x(k), y(k), button] = ginput(1);
     
+    if button == 32 % 32 = Space key
+        x(k) = [];  % delete last point acquired when space is pressed
+        y(k) = [];  % delete last point acquired when space is pressed
+        break
+    end
+
     % Ensure points stay within the bounding box
     x(k) = max(min(x(k), x_max), x_min);
     y(k) = max(min(y(k), y_max), y_min);
@@ -698,14 +703,19 @@ plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b'
 rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
 disp(' ')
 disp('Use the mouse to input via points for the reference trajectory.');
-disp('Press --button 3-- to end the input.');
+disp('Press Space key to end the input.');
 disp(' ');
-button = 1;
 k = 1;
 
-while button == 1
+while 1
     [x(k), y(k), button] = ginput(1);
     
+    if button == 32 % 32 = Space key
+        x(k) = [];  % delete last point acquired when space is pressed
+        y(k) = [];  % delete last point acquired when space is pressed
+        break
+    end
+
     % Ensure points stay within the bounding box
     x(k) = max(min(x(k), x_max), x_min);
     y(k) = max(min(y(k), y_max), y_min);
@@ -946,14 +956,19 @@ rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth',
 
 disp(' ')
 disp('Use the mouse to input via points for the reference trajectory.');
-disp('Press --button 3-- to end the input.');
+disp('Press Space key to end the input.');
 disp(' ');
-button = 1;
 k = 1;
 
 
-while button == 1
+while 1
     [x(k), y(k), button] = ginput(1);
+
+    if button == 32 % 32 = Space key
+        x(k) = [];  % delete last point acquired when space is pressed
+        y(k) = [];  % delete last point acquired when space is pressed
+        break
+    end
     
     % Ensure points stay within the bounding box
     x(k) = max(min(x(k), x_max), x_min);
@@ -1197,14 +1212,26 @@ axis([x_min - 5, x_max + 5, y_min - 5, y_max + 5]);
 
 % Generate the trajectory
 disp('Use the mouse to input via points for the reference trajectory');
-disp('--button 3-- to end the input');
+disp('Press the Space key to end the input');
 button = 1;
 k = 1;
 
-while button == 1
+while 1 
     [x(k), y(k), button] = ginput(1);
+    if button == 32 % 32 = Space key
+        x(k) = [];  % delete last point acquired when space is pressed
+        y(k) = [];  % delete last point acquired when space is pressed
+        break
+    end
     plot(x(k), y(k), 'r+');
     k = k + 1;
+end
+
+% If more than two points are selected
+if k-1 ~= 2 
+    disp('ERROR: Maximum of 2 points for a linear trajectory');
+    close all;
+    return
 end
 
 drawnow;
@@ -1232,25 +1259,28 @@ trajectory = [xx; yy];
 % Initialize arrays to store measurements
 ranges = zeros(T, 1); % Now only 1 anchor
 range_rates = zeros(T, 1);
-velocities = zeros(2, T);
-norma_das_velocidades = zeros(1,T);
+%velocities = zeros(2, T);
+%norma_das_velocidades = zeros(1,T);
 angles = zeros(T, 1);
 directions = zeros(2,T);
+
+% Compute Velocity - Constant in a linear trajectory
+velocity = [(xx(end) - xx(1))/T,(yy(end) - yy(1))/T];
 
 anchor_position = anchor(1, :);
 
 for t = 1:T
     
     % Simulate target motion
-    if t < T
-        % Compute velocity from consecutive positions
-        delta_position = trajectory(:, t+1) - trajectory(:, t); %formula 2 do enunciado
-        velocity = delta_position / dt;
-    else
-        velocity = velocities(t-1); %final speed
-    end
-    
-    velocities(:,t) = velocity;
+    %    if t < T
+    %        % Compute velocity from consecutive positions
+    %        delta_position = trajectory(:, t+1) - trajectory(:, t); %formula 2 do enunciado
+    %        velocity = delta_position / dt;
+    %    else
+    %        velocity = velocities(t-1); %final speed
+    %    end
+    %    
+    %    velocities(:,t) = velocity;
        
     % Compute range and angle measurements for one anchor    
     target_position = trajectory(:, t)';
@@ -1265,12 +1295,12 @@ for t = 1:T
     
     %Compute the direction from the anchor pointing towards the target
     directions(:,t) = [cos(angle), sin(angle)];  %Angle already in radians     
-    range_rates(t)= sum(velocities(:, t) .* directions(:, t));
+    range_rates(t)= sum(velocity*directions(:, t));
         
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Add Gaussian white noise to range and velocity measurements
+% Add Gaussian white noise to range and range rate measurements
 std_dev_range = 0.1; % Standard deviation for range measurements (0.1m)
 
 noisy_ranges = ranges + std_dev_range * randn(T, 1);
@@ -1278,12 +1308,11 @@ noisy_range_rates = range_rates + std_dev_range * randn(T, 1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% TASK 14
-
 close all;
 
 % Define anchor locations 
 a = anchor_position;
-nu = 1;
+nu = 100*100;
 
 % Define a grid of x and y values for contour plot
 vx = -3:0.1:3;
@@ -1301,13 +1330,13 @@ for i = 1:numel(Vx);
         shat = (norm(x0 + v_current*(t+1) - a) - norm(x0 + v_current*(t) - a))/1;
         cost(i) = cost(i) + (rhat - ranges(t))^2 + nu*(shat - range_rates(t))^2;
     end
-end
+end 
 
 % Create a contour plot of the cost function
 figure;
 contour(Vy, Vx, cost, 100); % Adjust the number of contour lines as needed
 hold;
-plot(velocities(:,1),velocities(:,2),'b'); % Plot real velocities
+plot(velocity(1),velocity(2), 'r.', 'MarkerSize', 20); % Plot Real velocity
 xlabel('x');
 ylabel('y');
 title('Cost Function Contour Plot');
