@@ -1228,7 +1228,7 @@ while 1
 end
 
 % If more than two points are selected
-if k-1 ~= 2 
+if k-1 <= 2 
     disp('ERROR: Maximum of 2 points for a linear trajectory');
     close all;
     return
