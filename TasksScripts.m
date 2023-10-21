@@ -484,7 +484,7 @@ grid on;
 hold on;
 xlabel('X (meters)');
 ylabel('Y (meters)');
-title('Generated 2D Trajectory with Anchors');
+tl1 = title('Generated 2D Trajectory with Anchors');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Define the bounding box and scaling factors
@@ -501,8 +501,11 @@ box_vertices = [x_min, y_min; x_min, y_max; x_max, y_min; x_max, y_max];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Place static anchors near the box vertices (adjust positions as needed)
 anchors = box_vertices - 1 + 2*rand(4, 2);
-plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
 
+colors = ["r","g","b","m"];
+for i = 1:4
+    plot(anchors(i, 1), anchors(i, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', colors(i));
+end
 % Plot the actual bounding box
 rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
 
@@ -546,14 +549,15 @@ nvia = 0:1:npt-1;
 csinterp_x = csapi(nvia, x);
 csinterp_y = csapi(nvia, y);
 
-T = 75; %number of samples
+T = 100; %number of samples
 time = linspace(0, npt-1, T); 
 xx = fnval(csinterp_x, time);
 yy = fnval(csinterp_y, time);
 
 % Plot the generated trajectory ('real one')
 plot(xx, yy, 'ro-');
-
+saveas(gcf,"Task9.png");
+%disp("here")
 % Simulate target motion and record measurements
 sample_rate = 2; % Hz
 dt = 1 / sample_rate;
@@ -599,46 +603,91 @@ end
 % Define optimization variables and find optimal trajectory for obtained
 % measurements
 
+mu_values = [0.01,0.1,1,10,100,1000];
 
-mu = 100; % Value of mu
-
-
-cvx_begin quiet
-    variable x(2, T)
-    
-    % Define the cost function
-    cost = 0;
-    for t = 1:T
+for i = 1:6
+    disp("Computing Solution fo mu = " + string(mu_values(i)) + "...");
+    mu = mu_values(i);
+    cvx_begin quiet
+        variable x(2, T)
         
-        %Range measurements part
-        for anchor_idx = 1:4
-            anchor_position = anchors(anchor_idx, :);
-            delta = x(:, t) - anchor_position';
-            range = norm(delta);
-            cost = cost + square_pos(range - ranges(t, anchor_idx));
-        end
-        
-        %Velocities part
-        if t == T
-            veloc = (x(:, t-1) - x(:, t))/dt;
-        elseif t == 1
-            veloc = (x(:, t+1) - x(:, t))/dt;
-        else
-            veloc = (x(:, t+1) - x(:, t-1))/(2*dt);
-        end
+        % Define the cost function
+        cost = 0;
+        for t = 1:T
             
-        cost = cost + mu * square_pos(norm(veloc - velocities(:, t)));
-    end
-    
-    minimize(cost)  
-cvx_end
+            %Range measurements part
+            for anchor_idx = 1:4
+                anchor_position = anchors(anchor_idx, :);
+                delta = x(:, t) - anchor_position';
+                range = norm(delta);
+                cost = cost + square_pos(range - ranges(t, anchor_idx));
+            end
+            
+            %Velocities part
+            if t == T
+                veloc = (x(:, t-1) - x(:, t))/dt;
+            elseif t == 1
+                veloc = (x(:, t+1) - x(:, t))/dt;
+            else
+                veloc = (x(:, t+1) - x(:, t-1))/(2*dt);
+            end
+                
+            cost = cost + mu * square_pos(norm(veloc - velocities(:, t)));
+        end
+        
+        minimize(cost)  
+    cvx_end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Plot the optimizated trajectory 
-for t = 1:T
-    plot(x(1, t), x(2, t), 'bx');
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Plot the optimizated trajectory 
+    pl = plot(x(1,:),x(2,:),"bx");
+    delete(tl1);
+    tl = title('Generated 2D Trajectory with Anchors with \mu = ' + string(mu));
+    saveas(gcf,"Task10_mu=" + string(mu) + ".png")
+    delete(pl);
+    delete(tl);
 end
 
+hold off;
+
+figure;
+hold on;
+plot(time,velocities(1,:),"-r","LineWidth",1);
+plot(time,velocities(2,:),"-b","LineWidth",1);
+plot(time,sqrt(sum(velocities.^2)),"-m","LineWidth",1);
+title("Velocities");
+xlabel("Time [s]");
+ylabel("Velocity [m/s]");
+hold off;
+legend("x-axis velocity","y-axis velocity","velocity norm");
+grid on;
+saveas(gcf,'Velocities.png')
+
+figure;
+hold on;
+plot(time,ranges(:,1),"-r","LineWidth",1);
+plot(time,ranges(:,2),"-g","LineWidth",1);
+plot(time,ranges(:,3),"-b","LineWidth",1);
+plot(time,ranges(:,4),"-m","LineWidth",1);
+title("Range Measurements");
+xlabel("Time [s]");
+ylabel("Distance to Anchor [m]");
+hold off;
+grid on;
+saveas(gcf,'Range_Measurements.png')
+
+figure;
+hold on;
+plot(time,angles(:,1),"-r","LineWidth",1);
+plot(time,angles(:,2),"-g","LineWidth",1);
+plot(time,angles(:,3),"-b","LineWidth",1);
+plot(time,angles(:,4),"-m","LineWidth",1);
+title("Angle Measurements");
+xlabel("Time [s]");
+ylabel("Angle Measurement [º]");
+hold off;
+grid on;
+saveas(gcf,'Angle_Measurements.png')
 
 % Task 10 conclusion
 %
@@ -1228,7 +1277,7 @@ while 1
 end
 
 % If more than two points are selected
-if k-1 <= 2 
+if k-1 > 2 
     disp('ERROR: Maximum of 2 points for a linear trajectory');
     close all;
     return
@@ -1242,13 +1291,14 @@ npt = length(x);        % Number of via points, including initial and final
 nvia = 0:1:npt - 1;     % Array to store the indices of the via points 
 csinterp_x = csapi(nvia, x);    % Smooth lines that connect the via points 
 csinterp_y = csapi(nvia, y);     
-time = linspace(0, npt - 1, 75);   % Generate 75 points from 0 to 2
+time = linspace(0, npt - 1, 50);   % Generate 50 points from 0 to 2
 xx = fnval(csinterp_x, time);
 yy = fnval(csinterp_y, time);
 
 x0 = [xx(1),yy(1)]; % Initial position
 
 plot(xx, yy, 'ro');
+saveas(gcf,"Task13.png")
 
 % Simulate target motion and record measurements
 T = length(time); %number of samples
@@ -1259,32 +1309,16 @@ trajectory = [xx; yy];
 % Initialize arrays to store measurements
 ranges = zeros(T, 1); % Now only 1 anchor
 range_rates = zeros(T, 1);
-%velocities = zeros(2, T);
-%norma_das_velocidades = zeros(1,T);
 angles = zeros(T, 1);
 directions = zeros(2,T);
 
 % Compute Velocity - Constant in a linear trajectory
-velocity = [(xx(end) - xx(1))/T,(yy(end) - yy(1))/T];
+velocity = [(xx(end) - xx(1))/(T*dt),(yy(end) - yy(1))/(T*dt)];
 
-anchor_position = anchor(1, :);
-
-for t = 1:T
-    
-    % Simulate target motion
-    %    if t < T
-    %        % Compute velocity from consecutive positions
-    %        delta_position = trajectory(:, t+1) - trajectory(:, t); %formula 2 do enunciado
-    %        velocity = delta_position / dt;
-    %    else
-    %        velocity = velocities(t-1); %final speed
-    %    end
-    %    
-    %    velocities(:,t) = velocity;
-       
+for t = 1:T       
     % Compute range and angle measurements for one anchor    
     target_position = trajectory(:, t)';
-    delta = target_position - anchor_position;
+    delta = target_position - anchor;
     range = norm(delta);
     angle = atan2(delta(2), delta(1));
     ranges(t, 1) = range;
@@ -1292,58 +1326,57 @@ for t = 1:T
     %Just to check if the measurements are ok
     angles(t, 1) = rad2deg(angle);  
     
-    
     %Compute the direction from the anchor pointing towards the target
-    directions(:,t) = [cos(angle), sin(angle)];  %Angle already in radians     
-    range_rates(t)= sum(velocity*directions(:, t));
-        
+    directions(:,t) = [cos(angle), sin(angle)];  %Angle already in radians
+    range_rates(t)= dot(velocity,directions(:, t));        
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Add Gaussian white noise to range and range rate measurements
 std_dev_range = 0.1; % Standard deviation for range measurements (0.1m)
+std_dev_range_rates = 0.1/sqrt(2);
 
 noisy_ranges = ranges + std_dev_range * randn(T, 1);
-noisy_range_rates = range_rates + std_dev_range * randn(T, 1);
+noisy_range_rates = range_rates + std_dev_range_rates * randn(T, 1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% TASK 14
 close all;
 
+nu = 100;
+
 % Define anchor locations 
-a = anchor_position;
-nu = 100*100;
+a = anchor;
 
 % Define a grid of x and y values for contour plot
-vx = -3:0.1:3;
-vy = -3:0.1:3;
+vx = -3.5:0.1:3.5;
+vy = -3.5:0.1:3.5;
 [Vx, Vy] = meshgrid(vx, vy);
 
 % Initialize the cost function matrix
 cost = zeros(size(Vx));
 
 % Calculate the cost function 
-for i = 1:numel(Vx);
-    v_current = [Vx(i), Vy(i)]; % Current velocity 
+for i = 1:numel(Vx)
+    v_current = [Vx(i), Vy(i)]; % Current velocity
     for t = 1:T
-        rhat = norm(x0 + v_current*t - a);
-        shat = (norm(x0 + v_current*(t+1) - a) - norm(x0 + v_current*(t) - a))/1;
-        cost(i) = cost(i) + (rhat - ranges(t))^2 + nu*(shat - range_rates(t))^2;
+        rhat = norm(x0 + v_current.*t - a);
+        shat = dot(v_current,x0 + v_current.*t - a)/rhat;
+        cost(i) = cost(i) + (rhat - noisy_ranges(t))^2 + nu*(shat - noisy_range_rates(t))^2;
     end
 end 
 
 % Create a contour plot of the cost function
 figure;
-contour(Vy, Vx, cost, 100); % Adjust the number of contour lines as needed
-hold;
+contour(Vy, Vx, cost, 150); % Adjust the number of contour lines as needed
+hold on;
 plot(velocity(1),velocity(2), 'r.', 'MarkerSize', 20); % Plot Real velocity
 xlabel('x');
 ylabel('y');
 title('Cost Function Contour Plot');
 colorbar;
 saveas(gcf,"Task14.png");
-
-
+hold off;
 
 
 
