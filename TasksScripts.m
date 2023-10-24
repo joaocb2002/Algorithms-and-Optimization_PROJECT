@@ -2,7 +2,7 @@
 %  
 % %   INSTITUTO SUPERIOR TÉCNICO MEEC
 % 
-% %   Author: João Castelo Branco, Mike, Rodas e Bernas
+% %   Author: João Castelo Branco, Miguel Lameiras, Rodrigo Faria e Bernardo Soares
 % 
 % %   This file contains the Matlab resolution of Tasks 1-16 of the course's
 % %   project.
@@ -1340,7 +1340,7 @@ noisy_ranges = ranges + std_dev_range * randn(T, 1);
 noisy_range_rates = range_rates + std_dev_range_rates * randn(T, 1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% TASK 14
+%% TASK 14 (run imediatelly after running task 13 please)
 close all;
 
 nu = 100;
@@ -1368,7 +1368,7 @@ end
 
 % Create a contour plot of the cost function
 figure;
-contour(Vy, Vx, cost, 150); % Adjust the number of contour lines as needed
+contour(Vy, Vx, cost, 1000); % Adjust the number of contour lines as needed
 hold on;
 plot(velocity(1),velocity(2), 'r.', 'MarkerSize', 20); % Plot Real velocity
 xlabel('x');
