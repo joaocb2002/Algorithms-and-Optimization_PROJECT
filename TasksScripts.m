@@ -1302,7 +1302,7 @@ saveas(gcf,"Task13.png")
 
 % Simulate target motion and record measurements
 T = length(time); %number of samples
-sample_rate = 4; % Hz
+sample_rate = 2; % Hz
 dt = 1 / sample_rate;
 trajectory = [xx; yy];
 
@@ -1313,7 +1313,7 @@ angles = zeros(T, 1);
 directions = zeros(2,T);
 
 % Compute Velocity - Constant in a linear trajectory
-velocity = [(xx(end) - xx(1))/(T*dt),(yy(end) - yy(1))/(T*dt)];
+velocity = [(xx(end) - xx(1))/(T),(yy(end) - yy(1))/(T)];
 
 for t = 1:T       
     % Compute range and angle measurements for one anchor    
@@ -1375,7 +1375,7 @@ legend;
 %% TASK 14
 close all;
 
-nu = 10;
+nu = 1e12;
 
 % Define anchor locations 
 a = anchor;
@@ -1400,7 +1400,7 @@ end
 
 % Create a contour plot of the cost function
 figure;
-contour(Vy, Vx, cost, 1000); % Adjust the number of contour lines as needed
+contour(Vx, Vy, cost, 2000); % Adjust the number of contour lines as needed
 hold on;
 plot(velocity(1),velocity(2), 'r.', 'MarkerSize', 20); % Plot Real velocity
 xlabel('x');
@@ -1435,7 +1435,7 @@ hold off;
 initial_velocity = [0, -1];
 
 % Set the desired step size tolerance (adjust this value as needed)
-step_tolerance = 1e-3;
+step_tolerance = 1e-6;
 
 % Set up options for the Levenberg-Marquardt algorithm
 options = optimoptions('lsqnonlin', 'Algorithm', 'levenberg-marquardt', 'Display', 'iter', 'StepTolerance', step_tolerance, 'OutputFcn', @output_function);
