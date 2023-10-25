@@ -2,7 +2,7 @@
 %  
 % %   INSTITUTO SUPERIOR TÉCNICO MEEC
 % 
-% %   Author: João Castelo Branco, Mike, Rodas e Bernas
+% %   Author: João Castelo Branco, Miguel Lameiras, Rodrigo Faria e Bernardo Soares
 % 
 % %   This file contains the Matlab resolution of Tasks 1-16 of the course's
 % %   project.
@@ -1400,7 +1400,7 @@ end
 
 % Create a contour plot of the cost function
 figure;
-contour(Vy, Vx, cost, 750); % Adjust the number of contour lines as needed
+contour(Vy, Vx, cost, 1000); % Adjust the number of contour lines as needed
 hold on;
 plot(velocity(1),velocity(2), 'r.', 'MarkerSize', 20); % Plot Real velocity
 xlabel('x');
