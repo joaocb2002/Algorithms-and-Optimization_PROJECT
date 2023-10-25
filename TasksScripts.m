@@ -1198,7 +1198,7 @@ end
 % 
 % What happens as you reduce the number of anchors?
 % 
-% When the number of anchors is reduced, it has the potential to impact the 
+% When the number of anchors is reduced, it has the potential to impact the
 % uniform distribution of error across the trajectory. With fewer anchors, 
 % there are fewer measurements available for the optimization process. As a 
 % result, the errors induced in each measurement can have a more pronounced 
@@ -1242,7 +1242,7 @@ rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'EdgeColor',
 
 
 % Define the single anchor position
-anchor_x = rand * (x_max - x_min) + x_min;  % Randomly place the anchor within the bounding box
+anchor_x = (x_max - x_min) + x_min;  % Randomly place the anchor within the bounding box
 anchor_y = 20;  % Place the anchor at y = 20
 
 anchor = [anchor_x, anchor_y];  % Create a 2D coordinate for the anchor
@@ -1297,7 +1297,7 @@ yy = fnval(csinterp_y, time);
 
 x0 = [xx(1),yy(1)]; % Initial position
 
-plot(xx, yy, 'ro');
+plot(xx, yy, 'mo');
 saveas(gcf,"Task13.png")
 
 % Simulate target motion and record measurements
@@ -1340,10 +1340,42 @@ noisy_ranges = ranges + std_dev_range * randn(T, 1);
 noisy_range_rates = range_rates + std_dev_range_rates * randn(T, 1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Create a figure
+figure;
+
+% Subplot 1: Range Measurements
+subplot(2, 1, 1);
+
+% Plot the true and noisy range measurements
+plot(time, ranges, 'b', 'DisplayName', 'Range (True)');
+hold on;
+plot(time, noisy_ranges, 'g', 'DisplayName', 'Range (Noisy)');
+hold off;
+
+title('Range Measurements');
+xlabel('Time');
+ylabel('Range');
+legend;
+
+% Subplot 2: Range Rate Measurements
+subplot(2, 1, 2);
+
+% Plot the true and noisy range rate measurements
+plot(time, range_rates, 'r', 'DisplayName', 'Range Rate (True)');
+hold on;
+plot(time, noisy_range_rates, 'm', 'DisplayName', 'Range Rate (Noisy)');
+hold off;
+
+title('Range Rate Measurements');
+xlabel('Time');
+ylabel('Range Rate');
+legend;
+
+
 %% TASK 14
 close all;
 
-nu = 100;
+nu = 10;
 
 % Define anchor locations 
 a = anchor;
@@ -1361,14 +1393,14 @@ for i = 1:numel(Vx)
     v_current = [Vx(i), Vy(i)]; % Current velocity
     for t = 1:T
         rhat = norm(x0 + v_current.*t - a);
-        shat = dot(v_current,x0 + v_current.*t - a)/rhat;
+        shat = dot(v_current, x0 + v_current.*t - a)/ rhat;
         cost(i) = cost(i) + (rhat - noisy_ranges(t))^2 + nu*(shat - noisy_range_rates(t))^2;
     end
 end 
 
 % Create a contour plot of the cost function
 figure;
-contour(Vy, Vx, cost, 150); % Adjust the number of contour lines as needed
+contour(Vy, Vx, cost, 750); % Adjust the number of contour lines as needed
 hold on;
 plot(velocity(1),velocity(2), 'r.', 'MarkerSize', 20); % Plot Real velocity
 xlabel('x');
@@ -1377,6 +1409,130 @@ title('Cost Function Contour Plot');
 colorbar;
 saveas(gcf,"Task14.png");
 hold off;
+
+%% Task 15
+
+
+
+
+
+
+
+
+
+%% Task 16
+
+% Initial velocity estimate
+initial_velocity = [0, -1];
+
+% Set the desired step size tolerance (adjust this value as needed)
+step_tolerance = 1e-3;
+
+% Set up options for the Levenberg-Marquardt algorithm
+options = optimoptions('lsqnonlin', 'Algorithm', 'levenberg-marquardt', 'Display', 'iter', 'StepTolerance', step_tolerance, 'OutputFcn', @output_function);
+
+% Define the objective funtion to minimize
+objective_function = @(velocity) cost_function(velocity, x0, a, noisy_ranges, noisy_range_rates, nu);
+
+% Use LM algorithm to find the optimized velocity
+predicted_velocity = lsqnonlin(objective_function, initial_velocity, [], [], options);
+
+% Display the optimized velocity
+disp('Predicted Velocity:');
+disp(predicted_velocity);
+
+% Evaluate the cost function at the optimized parameters
+minimum_cost = cost_function(predicted_velocity, x0, a, noisy_ranges, noisy_range_rates, nu);
+disp(['Minimum Cost Value: ', num2str(minimum_cost)]);
+
+% Define the cost funtion
+function total_cost = cost_function(velocity, x0, a, noisy_ranges, noisy_range_rates, nu)
+    % Initialize total cost
+    total_cost = 0;
+    
+    % Loop over all time instants
+    T = length(noisy_ranges);
+    for t = 1:T
+        % Calculate the estimated range and range rate
+        rhat = norm(x0 + velocity * t - a);
+        shat = dot(velocity, x0 + velocity * t - a) / rhat;
+        
+        % Compute the squared differences and add them to the total cost
+        cost_t = (rhat - noisy_ranges(t))^2 + nu * (shat - noisy_range_rates(t))^2;
+        total_cost = total_cost + cost_t;
+    end
+end
+
+% Output function to collect optimization information
+function stop = output_function(x, optimValues, state)
+    persistent iter
+    persistent cost_values
+    persistent gradient_norm_values
+    
+    % Initialize data on the first iteration
+    if isempty(iter)
+        iter = [];
+        cost_values = [];
+        gradient_norm_values = [];
+    end
+    
+    % Determine the field name for the function value based on the MATLAB version
+    if isfield(optimValues, 'fval')
+        cost_field = 'fval';
+    else
+        cost_field = 'resnorm';
+    end
+    
+    % Store iteration count, cost value, and gradient norm
+    iter = [iter; optimValues.iteration];
+    cost_values = [cost_values; optimValues.(cost_field)];
+    gradient_norm_values = [gradient_norm_values; norm(optimValues.residual)];
+    
+    % Check if the optimization has completed
+    if strcmp(state, 'done')
+        % Create a logarithmic y-axis plot for cost
+        figure;
+        subplot(2, 1, 1);
+        semilogy(iter, cost_values, '-o');
+        title('Logarithmic Cost Function Value vs. Iteration');
+        xlabel('Iteration');
+        ylabel('Log(Cost Function Value)');
+        
+        % Create a logarithmic y-axis plot for gradient norm
+        subplot(2, 1, 2);
+        semilogy(iter, gradient_norm_values, '-o');
+        title('Logarithmic Gradient Norm vs. Iteration');
+        xlabel('Iteration');
+        ylabel('Log(Gradient Norm)');
+        
+        stop = true; % Terminate optimization
+    else
+        stop = false;
+    end
+end
+
+%Conclusion
+
+% Given the non-convex nature of the range term, we cannot convert the least 
+% squares problem into a convex one by utilizing the (.)_+ operation, as we 
+% previously did. Instead, we must work with the non-convex cost function 
+% and employ the Levenberg-Marquardt algorithm to find a (local) minimum. This 
+% minimum is highly dependent on the initial predictions provided to the algorithm. 
+% To obtain a predicted velocity estimate, we constrain the initial position to its 
+% true value and minimize the cost function with respect to velocity. We utilize 
+% the step size between iterations as the stopping criterion, concluding the 
+% algorithm when the step size becomes smaller than a predetermined threshold. 
+% This indicates that we have likely reached a local minimum for the cost function.
+
+% The outcome of the LM algorithm is influenced by the user's initial estimate,
+% as the algorithm tends to approach the minimum that is closest to this starting
+% point. Therefore, if our estimate is in proximity to the global minimum, we
+% stand a better chance of reaching it. However, in cases where we lack knowledge
+% of the global minimum's location, as is often the case in our problem, we have
+% no means of determining whether our predicted velocity corresponds to the global
+% minimum of the cost function. In the next figure
+
+
 
 
 
