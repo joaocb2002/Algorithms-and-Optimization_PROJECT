@@ -1412,13 +1412,22 @@ hold off;
 
 %% Task 15
 
+%Conclusion
 
-
-
-
-
-
-
+% Trying to jointly estimate the initial position and the velocity of the
+% target is highly ambiguous, as the number of different combinations of
+% position and velocity that result on the same observed range and range
+% rate measurements is larger if we don’t fix any of the variables. Even 
+% when considering a linear trajectory, with the given true initial position 
+% and velocity, we can’t really be certain on a specific trajectory, as there 
+% still exist multiple trajectories that provide the same range and range 
+% measurements, that’s why we focus only on identifying the true parameters 
+% for the target.
+% The following graphs show how we can obtain the same measurements for 
+% different types of trajectories, with different initial positions and even 
+% with the same initial positions. We can note however that for a target 
+% moving uniformly along a linear trajectory there are no trajectories that 
+% lead to equal measurements when considering different velocities. 
 
 %% Task 16
 
