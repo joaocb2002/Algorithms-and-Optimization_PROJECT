@@ -1375,7 +1375,7 @@ legend;
 %% TASK 14
 close all;
 
-nu = 1e12;
+nu = 1e3;
 
 % Define anchor locations 
 a = anchor;
@@ -1430,15 +1430,16 @@ hold off;
 % lead to equal measurements when considering different velocities. 
 
 %% Task 16
+close all;
 
 % Initial velocity estimate
 initial_velocity = [0, -1];
 
 % Set the desired step size tolerance (adjust this value as needed)
-step_tolerance = 1e-6;
+func_tolerance = 1e-3;
 
 % Set up options for the Levenberg-Marquardt algorithm
-options = optimoptions('lsqnonlin', 'Algorithm', 'levenberg-marquardt', 'Display', 'iter', 'StepTolerance', step_tolerance, 'OutputFcn', @output_function);
+options = optimoptions('lsqnonlin', 'Algorithm', 'levenberg-marquardt', 'Display', 'iter', 'FunctionTolerance', func_tolerance, 'OutputFcn', @output_function);
 
 % Define the objective funtion to minimize
 objective_function = @(velocity) cost_function(velocity, x0, a, noisy_ranges, noisy_range_rates, nu);
@@ -1485,34 +1486,29 @@ function stop = output_function(x, optimValues, state)
         gradient_norm_values = [];
     end
     
-    % Determine the field name for the function value based on the MATLAB version
-    if isfield(optimValues, 'fval')
-        cost_field = 'fval';
-    else
-        cost_field = 'resnorm';
-    end
-    
     % Store iteration count, cost value, and gradient norm
     iter = [iter; optimValues.iteration];
-    cost_values = [cost_values; optimValues.(cost_field)];
-    gradient_norm_values = [gradient_norm_values; norm(optimValues.residual)];
+    cost_values = [cost_values; optimValues.residual];
+    gradient_norm_values = [gradient_norm_values; norm(optimValues.gradient)];
     
     % Check if the optimization has completed
     if strcmp(state, 'done')
         % Create a logarithmic y-axis plot for cost
         figure;
         subplot(2, 1, 1);
-        semilogy(iter, cost_values, '-o');
-        title('Logarithmic Cost Function Value vs. Iteration');
+        semilogy(iter, cost_values, '-or');
+        title('Convergence of Cost Function');
         xlabel('Iteration');
-        ylabel('Log(Cost Function Value)');
+        ylabel('Cost Function');
+        grid on
         
         % Create a logarithmic y-axis plot for gradient norm
         subplot(2, 1, 2);
         semilogy(iter, gradient_norm_values, '-o');
-        title('Logarithmic Gradient Norm vs. Iteration');
+        title('Convergence of Gradient Norm');
         xlabel('Iteration');
-        ylabel('Log(Gradient Norm)');
+        ylabel('Gradient Norm');
+        grid on;
         
         stop = true; % Terminate optimization
     else
