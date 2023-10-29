@@ -10,6 +10,6 @@ At task 9 the user will be presented with a blank graph for entering trajectorie
 
 Tasks 10,11 and 12 will iterate over various values of mu and may take a while. Check the terminal to view the status of the iteration.
 
-Task 13: Same as task 9.
+Task 13: Same as task 9 but with a maximum of 2 points.
 
 Results of tasks 14,15 and 16 will be saved or/and displayed on the console.
