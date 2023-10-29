@@ -35,14 +35,6 @@ legend('Location', 'Best'); % Add Legend
 saveas(gcf,"Task1.png");
 
 
-% Comment: The cost function ( |x - a| - r )^2 indicates inconsistency
-% between predicted and measured ranges for a target's position estimation.
-% With symmetry around a = 2, it exhibits multiple minima (x=1 and x=3), implying ambiguity
-% in localizing the target. The cost sharply increases away from these minima,
-% emphasizing sensitivity to position deviations. The target may be in one
-% of those positions.
-
-
 
 %% Task2
 clear;
@@ -72,30 +64,16 @@ end
 % Create a contour plot of the cost function
 figure;
 c = contour(X, Y, cost, 50); % Adjust the number of contour lines as needed
-%surf(X,Y,cost)
-hold;
-%plot(a1(1), a1(2), 'r.', 'MarkerSize', 20); % Display an Anchor
-%plot(a2(1), a2(2), 'r.', 'MarkerSize', 20); % Display an Anchor
+surf(X,Y,cost)
+hold on;
+plot(a1(1), a1(2), 'r.', 'MarkerSize', 20); % Display an Anchor
+plot(a2(1), a2(2), 'r.', 'MarkerSize', 20); % Display an Anchor
 xlabel('x');
 ylabel('y');
 title('Cost Function Contour Plot');
 colorbar;
 saveas(gcf,"Task2.png");
 
-% Minimizer Uniqueness: 
-% The minimizer for this problem is not unique because there are two intersection 
-% points in the 2D plane, resulting in two potential target positions. 
-% This non-uniqueness arises from the inherent geometric nature of intersecting circles.
-% 
-% Choosing Anchors for a Unique Minimizer: 
-% To achieve a cost function with a 
-% single global minimizer (excluding "degenerate" configurations), you would 
-% need a minimum of three non-collinear anchor points. With three such anchors 
-% and their respective range measurements, you can uniquely determine the 
-% target's position using trilateration, as it involves solving a system of 
-% equations with three unknowns (x, y, and potentially z in 3D) and three 
-% equations derived from the range measurements. This provides a unique 
-% solution and eliminates the ambiguity present in the two-anchor scenario.
 
 
 
@@ -175,20 +153,11 @@ zlabel('Cost');
 title('Cost Function 3D Plot');
 
 
-% In both tasks 3a and 3b, applying convex approximations to the cost functions 
-% did not reduce the ambiguity in solutions; it may have even increased it. 
-% The inherent problem of multiple potential solutions in localization scenarios
-% with intersecting circles persisted, highlighting that convex relaxations 
-% may not eliminate ambiguity.
-
-
 
 %% Task 4a 
 clear;
 close all;
 clc;
-
-%cvx_quiet(true); % Suppress CVX output
 
 % Define the anchor location and measured range
 a = 2;
@@ -272,32 +241,10 @@ colorbar;
 saveas(gcf,"Task4b.png");
 
 
-% In the context of localization problems, it's important to note that applying 
-% the convex approximation, as demonstrated in Task 4, indeed imparts convexity 
-% to the optimization problems. This feature eliminates the need to provide an 
-% initial estimate of the solution, as CVX can effectively handle convex 
-% optimization tasks.
-% 
-% However, a critical observation emerges: the use of convex approximation, 
-% while ensuring convexity, may increase the inherent ambiguity of the solution 
-%     in localization problems. As a result, the optimization process may yield 
-%     ambiguous or incorrect results, as seen in Task 4a and 4b.
-% 
-% In summary, the convex approximation, although suitable for convex 
-% optimization, may not fully resolve the fundamental issue of ambiguity in 
-% localization problems. Localization problems, by their nature, can still 
-% exhibit multiple potential solutions, leading to incorrect outcomes even 
-% when convex optimization tools like CVX are employed. Therefore, for 
-% localization tasks with inherent ambiguity, it remains essential to consider 
-% specialized non-convex optimization techniques and provide initial estimates 
-% to guide the optimization process towards accurate solutions.
-
 
 %% Task 5
 
-% Exercício teórico: resolver em papel? Como introduzir no relatório?
-% 
-% Nota: Foi resolvido nas aulas teóricas e a solução está antes da task 6...
+% Exercício teórico
 
 
 
@@ -305,26 +252,6 @@ saveas(gcf,"Task4b.png");
 
 % Exercício teórico
 
-% Incorporating angular information into localization problems offers a 
-% powerful means to disambiguate solutions. While relaxing the range terms in
-% the cost function provides convexity, it can increase the ambiguity of the 
-% solution. However, by adding angular information through distinct directions 
-% (uk), we can significantly enhance the problem's clarity.
-% 
-% If all directions (uk) are distinct, the minimum number required to ensure 
-% a unique solution, regardless of the range terms, is two. In a 2D localization 
-% problem, having two unique directions allows us to determine both the 
-% position and orientation of the target uniquely. This is achieved by 
-% removing angular ambiguity, as the two directions provide orthogonal 
-% reference frames.
-% 
-% Importantly, to guarantee a unique solution, it is essential that the 
-% angular direction of the target relative to each of these two possible 
-% anchors is not the same. In other words, the three vectors (directions 
-% from the target to the two anchors and their relative positions) should 
-% not be collinear. This condition ensures that the angular information 
-% provided by the distinct directions is non-redundant and contributes to 
-% the unequivocal determination of the target's position and orientation.
 
 
 %% Task 7a
@@ -452,22 +379,6 @@ cvx_end
 % Display the results
 disp('CVX Solution:');
 disp(['Target Position (x, y): (' num2str(x(1)) ', ' num2str(x(2)) ')']);
-
-
-% In comparing the outcomes of Task 4b and its angular version, it becomes 
-% evident that the inclusion of angular measurements significantly reduces 
-% ambiguity in the localization problem. In the initial version, without angular 
-% information, the solution exhibited notable ambiguity, yielding 
-% 'Target Position (x, y): (0.50991, 0).' This result indicated the challenges 
-% posed by the inherent ambiguity in range-based localization.
-% 
-% However, in the angular version with angular measurements at 40° and 140°, 
-% the ambiguity is notably diminished. The solution obtained was 
-% 'Target Position (x, y): (0.90929, 1.6021),' which aligns more closely 
-% with our expectations and reflects a more reasonable estimate of the 
-% target's position. This underscores the value of incorporating angular data 
-% into localization problems to enhance the accuracy and reliability of the 
-% solutions obtained
 
 
 
@@ -689,37 +600,6 @@ hold off;
 grid on;
 saveas(gcf,'Angle_Measurements.png')
 
-% Task 10 conclusion
-%
-% The objective of Task 10 is to investigate the influence of the parameter μ 
-% on the trajectory estimation problem. By varying the value of μ, we can observe 
-% how the optimization process balances the significance of the velocity 
-% measurements against the range measurements. This allows us to evaluate 
-% the trade-off between these two sources of information in the trajectory 
-% estimation process.
-% 
-% When we set μ to a very small value, such as μ = 0.01, the optimization 
-% trajectory closely aligns with the trajectory defined by interpolation. 
-% In this scenario, the term in the cost function associated with velocity 
-% measurements has a relatively low impact. Essentially, it suggests that 
-% adhering to velocity constraints is not a critical aspect of the optimization. 
-% Consequently, the solution predominantly adheres to the range measurements 
-% in the cost function.
-% 
-% Conversely, when μ is set to a significantly larger value, such as μ = 100, 
-% the optimization trajectory appears to be smaller in scale compared to the 
-% interpolation-based trajectory. This effect arises from the heightened 
-% importance of the term associated with velocity measurements in the cost 
-% function. The requirement to satisfy velocity constraints takes precedence 
-% over the range constraints in this case.
-% 
-% In summary, the parameter μ plays a pivotal role in determining the relative 
-% significance of velocity measurements in the cost function. A larger μ value 
-% places greater importance on velocity requirements, potentially leading to 
-% solutions that exhibit inconsistencies with the trajectory derived from range 
-% measurements. The choice of μ thus provides a means to fine-tune the balance 
-% between the impact of range and velocity measurements in the trajectory 
-% estimation process.
 
 
 
@@ -833,9 +713,6 @@ for t = 1:T
     end
 end
 
-% We saved ranges, angles and velocities from the 'real trajectory'
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Define optimization variables and find optimal trajectory for obtained
@@ -928,41 +805,6 @@ ylabel('Velocity Error (VE)');
 grid on
 axis tight
 
-
-%Conclusion
-
-% In Task 11, we extended our exploration of trajectory estimation with motion, 
-% focusing on the influence of the regularization parameter μ on the quality 
-% of our optimization results. Our primary objective was to investigate how the
-% choice of μ affects the trade-off between Range Error (RE) and Velocity Error 
-% (VE) within the context of trajectory optimization.
-% 
-% We initially generated a reference trajectory and introduced inconsistencies 
-% by scaling down velocity measurements. This deliberate incongruity allowed 
-% us to assess how different values of μ affect the optimization results. 
-% Through a series of optimization processes for distinct μ values, we observed 
-% that the resulting 2D plot of RE (x-axis) vs VE (y-axis) exhibits a distinct 
-% hyperbolic shape.
-% 
-% 
-% This plot's characteristics are insightful:
-% 
-% Inverse Relationship with μ: As μ increases, the Velocity Error (VE) tends to decrease 
-% while the Range Error (RE) simultaneously increases. Conversely, smaller μ 
-% values lead to higher VE and lower RE. This relationship signifies that the 
-% choice of μ strongly influences the optimization results.
-% 
-% Trade-off between Error Types: The hyperbolic shape indicates a clear trade-off 
-% between VE and RE. When optimizing with greater μ, the optimization process 
-% places greater emphasis on satisfying the velocity constraints, 
-% consequently yielding lower VE but higher RE. Conversely, smaller μ values 
-% prioritize the range measurements, yielding lower RE but higher VE.
-% 
-% This observation aligns with our previous findings in Task 10, where we found 
-% that smaller μ values make the velocity requirements less critical, while 
-% larger μ values prioritize velocity constraints over range constraints.
-
-%Note: Proving RE vs VE is decreasing is in a pdf file in GitHub
 
 
 %% Task 12
@@ -1168,64 +1010,11 @@ while mu < 2
 end
 
 
-% % Conclusion
-% 
-% Global Mean Navigation Error (MNE)for u = 0: 0.091678
-% 
-% Global Mean Navigation Error (MNE)for u = 1: 0.064157
 
 
-% Is the error distributed uniformly across the trajectories?
-% 
-% Indeed, it appears that the error is distributed relatively uniformly across 
-% the trajectories. This uniform distribution of error implies that the 
-% optimization variables (position and velocity) do not exhibit significant 
-% deviations from their real trajectory counterparts. The errors introduced 
-% in both range and velocity measurements seem to be distributed consistently
-% over the entire trajectory. This behavior is indicative of a well-balanced 
-% optimization process.
-% 
-% Furthermore, when the regularization parameter μ is set to 1, the velocity 
-% measurements play a significant role in improving the trajectory accuracy. 
-% This inclusion of velocity information allows the optimization to produce 
-% a more accurate trajectory. Consequently, the global mean navigation error 
-% (MNE) is smaller when μ is equal to 1, indicating a more faithful 
-% representation of the real trajectory. This result suggests that 
-% incorporating velocity measurements, when available, can lead to better 
-% trajectory estimation.
-% 
-% 
-% 
-% What happens as you reduce the number of anchors?
-% 
-% When the number of anchors is reduced, it has the potential to impact the
-% uniform distribution of error across the trajectory. With fewer anchors, 
-% there are fewer measurements available for the optimization process. As a 
-% result, the errors induced in each measurement can have a more pronounced 
-% effect on the trajectory estimation. The smaller number of measurements 
-% reduces the ability to "cancel out" or "balance" these errors. This is 
-% particularly noticeable in scenarios where the measurements' errors, both 
-% in range and velocity, are significant.
-% 
-% In the context of fewer anchors, the optimization process may encounter 
-% greater difficulty in producing a trajectory that closely matches the real 
-% trajectory. The decreased redundancy in measurements could result in a trajectory 
-% that deviates more from the actual motion of the target. Therefore, 
-% in such scenarios, the error distribution across the trajectory may be 
-% less uniform compared to cases with a greater number of anchors.
-% 
-% In conclusion, the uniform distribution of error in trajectory estimation 
-% is influenced by factors such as the value of μ and the number of available 
-% anchor measurements. Smaller values of μ, especially when incorporating 
-% velocity data, tend to lead to more accurate trajectory estimates. 
-% Conversely, reducing the number of anchors may disrupt the uniformity 
-% of error distribution, potentially causing the trajectory to deviate 
-% further from the real motion of the target. These insights emphasize the 
-% importance of measurement redundancy and appropriate regularization in 
-% improving trajectory estimation accuracy.
 
+%% Task 13
 
-%% TASK 13
 % Define parameters
 clear;
 close all;
@@ -1372,10 +1161,11 @@ ylabel('Range Rate');
 legend;
 
 
-%% TASK 14
+%% Task 14
+
 close all;
 
-nu = 1e12;
+nu = 1e3;
 
 % Define anchor locations 
 a = anchor;
@@ -1412,33 +1202,19 @@ hold off;
 
 %% Task 15
 
-%Conclusion
-
-% Trying to jointly estimate the initial position and the velocity of the
-% target is highly ambiguous, as the number of different combinations of
-% position and velocity that result on the same observed range and range
-% rate measurements is larger if we don’t fix any of the variables. Even 
-% when considering a linear trajectory, with the given true initial position 
-% and velocity, we can’t really be certain on a specific trajectory, as there 
-% still exist multiple trajectories that provide the same range and range 
-% measurements, that’s why we focus only on identifying the true parameters 
-% for the target.
-% The following graphs show how we can obtain the same measurements for 
-% different types of trajectories, with different initial positions and even 
-% with the same initial positions. We can note however that for a target 
-% moving uniformly along a linear trajectory there are no trajectories that 
-% lead to equal measurements when considering different velocities. 
+%Exercicio Teorico 
 
 %% Task 16
+close all;
 
 % Initial velocity estimate
 initial_velocity = [0, -1];
 
 % Set the desired step size tolerance (adjust this value as needed)
-step_tolerance = 1e-6;
+func_tolerance = 1e-3;
 
 % Set up options for the Levenberg-Marquardt algorithm
-options = optimoptions('lsqnonlin', 'Algorithm', 'levenberg-marquardt', 'Display', 'iter', 'StepTolerance', step_tolerance, 'OutputFcn', @output_function);
+options = optimoptions('lsqnonlin', 'Algorithm', 'levenberg-marquardt', 'Display', 'iter', 'FunctionTolerance', func_tolerance, 'OutputFcn', @output_function);
 
 % Define the objective funtion to minimize
 objective_function = @(velocity) cost_function(velocity, x0, a, noisy_ranges, noisy_range_rates, nu);
@@ -1485,34 +1261,29 @@ function stop = output_function(x, optimValues, state)
         gradient_norm_values = [];
     end
     
-    % Determine the field name for the function value based on the MATLAB version
-    if isfield(optimValues, 'fval')
-        cost_field = 'fval';
-    else
-        cost_field = 'resnorm';
-    end
-    
     % Store iteration count, cost value, and gradient norm
     iter = [iter; optimValues.iteration];
-    cost_values = [cost_values; optimValues.(cost_field)];
-    gradient_norm_values = [gradient_norm_values; norm(optimValues.residual)];
+    cost_values = [cost_values; optimValues.residual];
+    gradient_norm_values = [gradient_norm_values; norm(optimValues.gradient)];
     
     % Check if the optimization has completed
     if strcmp(state, 'done')
         % Create a logarithmic y-axis plot for cost
         figure;
         subplot(2, 1, 1);
-        semilogy(iter, cost_values, '-o');
-        title('Logarithmic Cost Function Value vs. Iteration');
+        semilogy(iter, cost_values, '-or');
+        title('Convergence of Cost Function');
         xlabel('Iteration');
-        ylabel('Log(Cost Function Value)');
+        ylabel('Cost Function');
+        grid on
         
         % Create a logarithmic y-axis plot for gradient norm
         subplot(2, 1, 2);
         semilogy(iter, gradient_norm_values, '-o');
-        title('Logarithmic Gradient Norm vs. Iteration');
+        title('Convergence of Gradient Norm');
         xlabel('Iteration');
-        ylabel('Log(Gradient Norm)');
+        ylabel('Gradient Norm');
+        grid on;
         
         stop = true; % Terminate optimization
     else
@@ -1520,26 +1291,6 @@ function stop = output_function(x, optimValues, state)
     end
 end
 
-%Conclusion
-
-% Given the non-convex nature of the range term, we cannot convert the least 
-% squares problem into a convex one by utilizing the (.)_+ operation, as we 
-% previously did. Instead, we must work with the non-convex cost function 
-% and employ the Levenberg-Marquardt algorithm to find a (local) minimum. This 
-% minimum is highly dependent on the initial predictions provided to the algorithm. 
-% To obtain a predicted velocity estimate, we constrain the initial position to its 
-% true value and minimize the cost function with respect to velocity. We utilize 
-% the step size between iterations as the stopping criterion, concluding the 
-% algorithm when the step size becomes smaller than a predetermined threshold. 
-% This indicates that we have likely reached a local minimum for the cost function.
-
-% The outcome of the LM algorithm is influenced by the user's initial estimate,
-% as the algorithm tends to approach the minimum that is closest to this starting
-% point. Therefore, if our estimate is in proximity to the global minimum, we
-% stand a better chance of reaching it. However, in cases where we lack knowledge
-% of the global minimum's location, as is often the case in our problem, we have
-% no means of determining whether our predicted velocity corresponds to the global
-% minimum of the cost function. In the next figure
 
 
 
