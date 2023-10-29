@@ -8,9 +8,7 @@
 % %   project.
 
 %% Task1 
-clear;
 close all;
-clc;
 
 % Define the anchor location and measured range
 a = 2;
@@ -37,9 +35,7 @@ saveas(gcf,"Task1.png");
 
 
 %% Task2
-clear;
 close all;
-clc;
 
 % Define anchor locations and range measurements
 a1 = [-1, 0];
@@ -79,9 +75,7 @@ saveas(gcf,"Task2.png");
 
 
 %% Task3a - Repetition of task 1 with convex approximation
-clear;
 close all;
-clc;
 
 % Define the anchor location and measured range
 a = 2;
@@ -108,9 +102,7 @@ saveas(gcf,"Task3a.png");
 
 
 %% Task3b - Repetition of task 2 with convex approximation
-clear;
 close all;
-clc;
 
 % Define anchor locations and range measurements
 a1 = [-1, 0];
@@ -155,9 +147,7 @@ title('Cost Function 3D Plot');
 
 
 %% Task 4a 
-clear;
 close all;
-clc;
 
 % Define the anchor location and measured range
 a = 2;
@@ -193,9 +183,7 @@ saveas(gcf,"Task4a.png");
 
 
 %% Task 4b - Solve the 2D localization problem in CVX with convex approximation
-clear;
 close all;
-clc;
 
 % Define anchor locations and range measurements
 a1 = [-1, 0];
@@ -256,9 +244,7 @@ saveas(gcf,"Task4b.png");
 
 %% Task 7a
 % Scenario (i) - Single Anchor
-clear;
 close all;
-clc;
 
 % Define anchor location and angle in polar coordinates (40 degrees)
 a = [-1, 0];
@@ -301,9 +287,7 @@ saveas(gcf,"Task7a.png");
 %% 7b
 
 % Scenario (ii) - Two Anchors
-clear;
 close all;
-clc;
 
 % Define anchor locations and angles in polar coordinates (40 degrees and 140 degrees)
 a1 = [-1, 0];
@@ -354,8 +338,6 @@ saveas(gcf,"Task7b.png");
 %% Task 8
 
 clear;
-close all;
-clc;
 
 % Define anchor locations and range measurements
 a1 = [-1, 0];
@@ -516,8 +498,9 @@ end
 
 mu_values = [0.01,0.1,1,10,100,1000];
 
+disp("Solving Task 10...");
 for i = 1:6
-    disp("Computing Solution fo mu = " + string(mu_values(i)) + "...");
+    disp("Computing Solution for mu = " + string(mu_values(i)) + "...");
     mu = mu_values(i);
     cvx_begin quiet
         variable x(2, T)
@@ -605,128 +588,24 @@ saveas(gcf,'Angle_Measurements.png')
 
 %% Task 11
 close all;
-clear;
-clc;
 
-figure(1);
-xlim([-21, 21]);
-ylim([-21, 21]);
-grid on;
-hold on;
-xlabel('X (meters)');
-ylabel('Y (meters)');
-title('Generated 2D Trajectory with Anchors');
-
-%Bounding box
-x_min = -20;
-x_max = 20;
-y_min = -20;
-y_max = 20;
-box_vertices = [x_min, y_min; x_min, y_max; x_max, y_min; x_max, y_max];
-
-%Anchors
-anchors = box_vertices - 1 + 2*rand(4, 2);
-plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
-
-% Plot the actual bounding box and defining trajectory mandatory points
-rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
-disp(' ')
-disp('Use the mouse to input via points for the reference trajectory.');
-disp('Press Space key to end the input.');
-disp(' ');
-k = 1;
-
-while 1
-    [x(k), y(k), button] = ginput(1);
-    
-    if button == 32 % 32 = Space key
-        x(k) = [];  % delete last point acquired when space is pressed
-        y(k) = [];  % delete last point acquired when space is pressed
-        break
-    end
-
-    % Ensure points stay within the bounding box
-    x(k) = max(min(x(k), x_max), x_min);
-    y(k) = max(min(y(k), y_max), y_min);
-    
-    plot(x(k), y(k), 'r+', 'Linewidth', 2);
-    k = k + 1;
-end
-
-drawnow;
-disp(' ')
-disp(['There are ', num2str(k-1), ' points to interpolate from.'])
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Trajectory generation using cubic splines
-
-npt = length(x);        % number of via points, including initial and final
-nvia = 0:1:npt-1;
-
-csinterp_x = csapi(nvia, x);
-csinterp_y = csapi(nvia, y);
-
-T = 75; %number of samples
-time = linspace(0, npt-1, T); 
-xx = fnval(csinterp_x, time);
-yy = fnval(csinterp_y, time);
-
-% Plot the generated trajectory ('real one')
-plot(xx, yy, 'ro-');
-
-% Simulate target motion and record measurements
-sample_rate = 2; % Hz
-dt = 1 / sample_rate;
-trajectory = [xx; yy];
-
-% Initialize arrays to store measurements
-ranges = zeros(T, 4); % Four anchors
-angles = zeros(T, 4); % Four anchors
-velocities = zeros(2, T);
-
-for t = 1:T
-    % Simulate target motion
-    if t == 1
-        delta_position = trajectory(:, t+1) - trajectory(:, t); %initial speed
-        velocity = (delta_position) / dt; 
-    elseif t == T 
-        delta_position = trajectory(:, t-1) - trajectory(:, t); %final speed
-        velocity = (delta_position) / dt;  
-    else
-        % Compute velocity from consecutive positions
-        delta_position = trajectory(:, t+1) - trajectory(:, t-1); %formula 3 do enunciado
-        velocity = (delta_position) / (2*dt);
-    end
-    
-    velocities(:, t) = 0.8*velocity; %Set of velocity vectors (0.8 introduces an inconsistency)
-    
-    % Compute range and angle measurements for each anchor
-    for anchor_idx = 1:4
-        anchor_position = anchors(anchor_idx, :);
-        target_position = trajectory(:, t)';
-        delta = target_position - anchor_position;
-        range = norm(delta);
-        angle = atan2(delta(2), delta(1));
-        
-        ranges(t, anchor_idx) = range;
-        angles(t, anchor_idx) = rad2deg(angle); %save angle in degrees
-    end
-end
-
+% Induce inconsistency
+inconsistent_velocities = 0.8.*velocities;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Define optimization variables and find optimal trajectory for obtained
 % measurements and determine range and velocity error calculation
 
-values = [0.01, 0.05, 0.1, 0.5, 1, 5, 10, 50, 100, 1000]; % Value of mu
+values = [0.01, 0.05, 0.1, 0.5, 1, 5, 10, 50, 100, 1000]; % Values of mu
 
 RE = zeros(1, length(values));
 VE = zeros(1, length(values));
 
+disp("Solving Task 11...");
 for k = 1:length(values)
     mu = values(k);
+    disp("Computing Solution for mu = " + string(mu) + "...");
     
-   
     cvx_begin quiet
         variable x(2, T)
 
@@ -751,7 +630,7 @@ for k = 1:length(values)
                 veloc = (x(:, t+1) - x(:, t-1))/(2*dt);
             end
 
-            cost = cost + mu * square_pos(norm(veloc - velocities(:, t)));
+            cost = cost + mu * square_pos(norm(veloc - inconsistent_velocities(:, t)));
         end
 
         minimize(cost)  
@@ -791,7 +670,7 @@ for k = 1:length(values)
             veloc = (x(:, t+1) - x(:, t-1))/(2*dt);
         end
 
-        VE(1, k) = (norm(veloc - velocities(:, t)))^2;
+        VE(1, k) = (norm(veloc - inconsistent_velocities(:, t)))^2;
 
     end
 end
@@ -802,132 +681,15 @@ semilogx(RE, VE, 'ro-');
 title('2D plot for RE(\mu) vs VE(\mu)');
 xlabel('Range Error (RE)');
 ylabel('Velocity Error (VE)');
-grid on
-axis tight
+grid on;
+axis tight;
+saveas(gcf,"Task11.png")
 
 
 
 %% Task 12
 
 close all;
-clear;
-clc;
-
-figure;
-xlim([-21, 21]);
-ylim([-21, 21]);
-grid on;
-hold on;
-xlabel('X (meters)');
-ylabel('Y (meters)');
-title('Generated 2D Trajectory with Anchors');
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Define the bounding box and scaling factors
-x_min = -20;
-x_max = 20;
-y_min = -20;
-y_max = 20;
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Generate the bounding box vertices
-box_vertices = [x_min, y_min; x_min, y_max; x_max, y_min; x_max, y_max];
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Place static anchors near the box vertices (adjust positions as needed)
-anchors = box_vertices - 1 + 2*rand(4, 2);
-plot(anchors(:, 1), anchors(:, 2), 'bo', 'MarkerSize', 7, 'MarkerFaceColor', 'b');
-
-% Plot the actual bounding box
-rectangle('Position', [x_min, y_min, x_max - x_min, y_max - y_min], 'LineWidth', 0.5);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Defining trajectory mandatory points
-
-disp(' ')
-disp('Use the mouse to input via points for the reference trajectory.');
-disp('Press Space key to end the input.');
-disp(' ');
-k = 1;
-
-
-while 1
-    [x(k), y(k), button] = ginput(1);
-
-    if button == 32 % 32 = Space key
-        x(k) = [];  % delete last point acquired when space is pressed
-        y(k) = [];  % delete last point acquired when space is pressed
-        break
-    end
-    
-    % Ensure points stay within the bounding box
-    x(k) = max(min(x(k), x_max), x_min);
-    y(k) = max(min(y(k), y_max), y_min);
-    
-    plot(x(k), y(k), 'r+', 'Linewidth', 2);
-    k = k + 1;
-end
-
-drawnow;
-disp(' ')
-disp(['There are ', num2str(k-1), ' points to interpolate from.'])
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Trajectory generation using cubic splines
-
-npt = length(x);        % number of via points, including initial and final
-nvia = 0:1:npt-1;
-
-csinterp_x = csapi(nvia, x);
-csinterp_y = csapi(nvia, y);
-
-T = 75; %number of samples
-time = linspace(0, npt-1, T); 
-xx = fnval(csinterp_x, time);
-yy = fnval(csinterp_y, time);
-
-% Plot the generated trajectory ('real one')
-plot(xx, yy, 'ro-');
-
-% Simulate target motion and record measurements
-sample_rate = 2; % Hz
-dt = 1 / sample_rate;
-trajectory = [xx; yy];
-
-% Initialize arrays to store measurements
-ranges = zeros(T, 4); % Four anchors
-angles = zeros(T, 4); % Four anchors
-velocities = zeros(2, T);
-
-for t = 1:T
-    % Simulate target motion
-    if t == 1
-        delta_position = trajectory(:, t+1) - trajectory(:, t); %initial speed
-        velocity = (delta_position) / dt; 
-    elseif t == T 
-        delta_position = trajectory(:, t-1) - trajectory(:, t); %final speed
-        velocity = (delta_position) / dt;  
-    else
-        % Compute velocity from consecutive positions
-        delta_position = trajectory(:, t+1) - trajectory(:, t-1); %formula 3 do enunciado
-        velocity = (delta_position) / (2*dt);
-    end
-    
-    velocities(:, t) = 1*velocity; %Set of velocity vectors (0.8 introduces an inconsistency)
-    
-    % Compute range and angle measurements for each anchor
-    for anchor_idx = 1:4
-        anchor_position = anchors(anchor_idx, :);
-        target_position = trajectory(:, t)';
-        delta = target_position - anchor_position;
-        range = norm(delta);
-        angle = atan2(delta(2), delta(1));
-        
-        ranges(t, anchor_idx) = range;
-        angles(t, anchor_idx) = rad2deg(angle); %save angle in degrees
-    end
-end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Add Gaussian white noise to range and velocity measurements
@@ -942,12 +704,14 @@ noisy_velocities = velocities + std_dev_velocity * randn(2, T);
 % Define optimization variables and find optimal trajectory for obtained
 % measurements
 
-disp(ranges)
 mu = 0; % Value of mu. We gonna test it for mu=0 and mu=1
 
+disp("Solving Task 12...");
 while mu < 2
     cvx_begin quiet
+        disp("Computing Solution for mu = " + string(mu) + "...");
         variable x(2, T)
+        
 
         % Define the cost function
         cost = 0;
@@ -1190,7 +954,7 @@ end
 
 % Create a contour plot of the cost function
 figure;
-contour(Vx, Vy, cost, 2000); % Adjust the number of contour lines as needed
+contour(Vx, Vy, cost, 300); % Adjust the number of contour lines as needed
 hold on;
 plot(velocity(1),velocity(2), 'r.', 'MarkerSize', 20); % Plot Real velocity
 xlabel('x');
@@ -1286,20 +1050,11 @@ function stop = output_function(x, optimValues, state)
         grid on;
         
         stop = true; % Terminate optimization
+
+        saveas(gcf,"Task16.png");
     else
         stop = false;
     end
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
+%EOF
